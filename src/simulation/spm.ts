@@ -17,6 +17,7 @@ export function exchangeCurrentDensity(
   c_e: number,
   c_surf: number,
   c_max: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _T_K: number,
 ): number {
   return k * F * Math.sqrt(c_e * c_surf * (c_max - c_surf));

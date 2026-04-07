@@ -114,7 +114,7 @@ export function LineChart({
       data.forEach((d, i) => {
         const x = px(d);
         const y = py(d[s.key] ?? 0);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        if (i === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
       });
       ctx.stroke();
       if (s.dashed) ctx.setLineDash([]);

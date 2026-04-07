@@ -79,7 +79,7 @@ export function motorStep(
   } else {
     // MOTOR: traction
     const V_bemf = omega_motor / kV_rad;
-    let I_motor_ideal = (P_mech_kW * 1000 / mc.n) / Math.max(V_bemf, 1.0);
+    const I_motor_ideal = (P_mech_kW * 1000 / mc.n) / Math.max(V_bemf, 1.0);
 
     const I_limit = (boost_t < 5.0) ? mc.I_peak : mc.I_cont;
     I_motor_per = Math.min(I_motor_ideal, I_limit);

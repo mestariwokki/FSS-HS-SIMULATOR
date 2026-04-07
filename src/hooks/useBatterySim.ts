@@ -30,6 +30,7 @@ export function useBatterySim() {
   const [status, setStatus] = useState('Waiting for inputs.');
   const [stats, setStats] = useState<SimStats>({ min_v: 99, max_T: T_REF, max_eta: 0, max_vsag: 0 });
 
+  const [simState, setSimState] = useState<SimState>(makeState(1.0, 25));
   const stateRef = useRef<SimState>(makeState(1.0, 25));
   const dataRef = useRef<BatteryDataPoint[]>([]);
   const animRef = useRef<number | null>(null);
@@ -150,6 +151,7 @@ export function useBatterySim() {
       }
 
       stateRef.current = st;
+      setSimState({ ...st });
       setData([...dataRef.current]);
       setStats({ ...statsRef.current });
       animRef.current = requestAnimationFrame(loop);
@@ -237,7 +239,7 @@ export function useBatterySim() {
     paused,
     status,
     stats,
-    simState: stateRef.current,
+    simState,
     start,
     pause,
     reset,
