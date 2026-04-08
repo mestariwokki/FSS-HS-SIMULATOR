@@ -4,8 +4,6 @@ import { useMotorSim } from '../../hooks/useMotorSim';
 import { DEFAULT_MOTOR } from '../../simulation/motor/motorConstants';
 import { kVtoKt } from '../../simulation/motor/motorConstants';
 import { calcSoH } from '../../simulation/ecm';
-import { MotorConfigPanel } from './MotorConfigPanel';
-import { EscConfigPanel } from './EscConfigPanel';
 import { Acc75Panel } from './Acc75Panel';
 import { MotorLiveValues } from './MotorLiveValues';
 import { MotorSummaryTable } from './MotorSummaryTable';
@@ -14,12 +12,12 @@ import { LineChart } from '../charts/LineChart';
 import { EfficiencyMap } from '../charts/EfficiencyMap';
 import { ParamGroup } from '../common/ParamGroup';
 import { exportMotorCSV } from '../../utils/csvExport';
-import { ICE_TORQUE_CURVE, interpICETorque, calcIceFuelStep } from '../../simulation/motor/iceEngine';
+import { DrivetrainComparePanel } from './DrivetrainComparePanel';
 
 export function MotorTab() {
   const sim = useMotorSim();
 
-  // Pack config (shared defaults, mirroring battery tab)
+  // ── Pack config ──────────────────────────────────────────────────────────
   const [series, setSeries] = useState(13);
   const [parallel, setParallel] = useState(2);
   const [capacity, setCapacity] = useState(6.6);
@@ -33,7 +31,7 @@ export function MotorTab() {
   const [r2] = useState(15);
   const [tau2] = useState(50);
 
-  // Motor params
+  // ── BLDC motor params ────────────────────────────────────────────────────
   const [kV, setKV] = useState(DEFAULT_MOTOR.kV);
   const [Rw, setRw] = useState(DEFAULT_MOTOR.Rw);
   const [gear, setGear] = useState(DEFAULT_MOTOR.gear);
@@ -46,15 +44,18 @@ export function MotorTab() {
   const [etaEsc, setEtaEsc] = useState(DEFAULT_MOTOR.eta_c);
   const [etaRegen, setEtaRegen] = useState(DEFAULT_MOTOR.eta_regen);
   const [etaMotor, setEtaMotor] = useState(DEFAULT_MOTOR.eta_m);
-
-  // Thermal
   const [mCpMotor, setMCpMotor] = useState(DEFAULT_MOTOR.mCp_m);
   const [rThMotor, setRThMotor] = useState(DEFAULT_MOTOR.R_th_m);
   const [mCpEsc, setMCpEsc] = useState(DEFAULT_MOTOR.mCp_e);
   const [rThEsc, setRThEsc] = useState(DEFAULT_MOTOR.R_th_e);
   const [tAmb, setTAmb] = useState(DEFAULT_MOTOR.T_amb);
 
-  // Vehicle / accel
+  // ── ICE params ───────────────────────────────────────────────────────────
+  const [iceRpm, setIceRpm] = useState(6000);
+  const [iceBsfc, setIceBsfc] = useState(300);
+  const [iceGear, setIceGear] = useState(3.5);
+
+  // ── Vehicle / accel ──────────────────────────────────────────────────────
   const [mass, setMass] = useState(DEFAULT_MOTOR.mass);
   const [CdA, setCdA] = useState(DEFAULT_MOTOR.CdA);
   const [Crr, setCrr] = useState(DEFAULT_MOTOR.Crr);
@@ -65,15 +66,7 @@ export function MotorTab() {
   const [massAcc, setMassAcc] = useState(DEFAULT_MOTOR.mass_acc);
   const [CrrAcc, setCrrAcc] = useState(DEFAULT_MOTOR.Crr_acc);
 
-  // Drivetrain type
-  const [drivetrainType, setDrivetrainType] = useState<'electric' | 'ice'>('electric');
-
-  // ICE params
-  const [iceRpm, setIceRpm] = useState(6000);
-  const [iceBsfc, setIceBsfc] = useState(300); // g/kWh
-  const [iceGear, setIceGear] = useState(3.5);  // ICE→wheel gear ratio
-
-  // Sim mode
+  // ── Simulation mode ──────────────────────────────────────────────────────
   const [mode, setMode] = useState<MotorMode>('acc75');
   const [constSpeed, setConstSpeed] = useState(60);
   const [vTarget, setVTarget] = useState(100);
@@ -88,6 +81,7 @@ export function MotorTab() {
     { duration_s: 5, speed_kmh: 40, power_kW: -2 },
   ]);
 
+  // ── Derived configs ──────────────────────────────────────────────────────
   const pack: PackConfig = useMemo(() => ({
     series, parallel,
     cell: { capacity_Ah: capacity, v_max: vMax, v_nom: vNom, v_min: vMin },
@@ -132,76 +126,38 @@ export function MotorTab() {
   }), [Kt, kV, Rw, pCont, pPeak, nMotors, gear, wheelD, etaEsc, iCont, iPeak, etaRegen, etaMotor, mCpMotor, rThMotor, mCpEsc, rThEsc]);
 
   const handleStart = useCallback(() => {
-    const mc = {
-      Kt,
-      kV,
-      Rw,
-      eta_c: etaEsc,
-      eta_regen: etaRegen,
-      gear,
-      wheel_d_mm: wheelD,
-      P_cont: pCont,
-      P_peak: pPeak,
-      I_cont: iCont,
-      I_peak: iPeak,
-      n: nMotors,
-      eta_m: etaMotor,
-      mCp_m: mCpMotor,
-      R_th_m: rThMotor,
-      mCp_e: mCpEsc,
-      R_th_e: rThEsc,
-      T_amb: tAmb,
-      v_start: constSpeed,
-      v_target: vTarget,
-      mass,
-      CdA,
-      Crr,
-      mu,
-      f_front: fFront,
-      h_cg: hCg,
-      wheelbase,
-      mass_acc: massAcc,
-      Crr_acc: CrrAcc,
-      soc_warn: 20,
-      I_warn: 200,
-      T_warn_m: 80,
-      T_warn_e: 70,
-    };
-
     sim.start(
-      pack, ecm, mc,
+      pack, ecm,
+      {
+        Kt, kV, Rw,
+        eta_c: etaEsc, eta_regen: etaRegen,
+        gear, wheel_d_mm: wheelD,
+        P_cont: pCont, P_peak: pPeak,
+        I_cont: iCont, I_peak: iPeak,
+        n: nMotors, eta_m: etaMotor,
+        mCp_m: mCpMotor, R_th_m: rThMotor,
+        mCp_e: mCpEsc, R_th_e: rThEsc,
+        T_amb: tAmb,
+        v_start: constSpeed, v_target: vTarget,
+        mass, CdA, Crr, mu,
+        f_front: fFront, h_cg: hCg, wheelbase,
+        mass_acc: massAcc, Crr_acc: CrrAcc,
+        soc_warn: 20, I_warn: 200,
+      },
       mode, soc0, t0, duration,
       mode === 'profile' ? profileSteps : undefined,
       mode === 'regen' ? { power_kW: regenPower, speed_kmh: regenSpeed } : undefined,
     );
   }, [pack, ecm, Kt, kV, Rw, etaEsc, etaRegen, gear, wheelD, pCont, pPeak, iCont, iPeak, nMotors, etaMotor, mCpMotor, rThMotor, mCpEsc, rThEsc, tAmb, constSpeed, vTarget, mass, CdA, Crr, mu, fFront, hCg, wheelbase, massAcc, CrrAcc, mode, soc0, t0, duration, profileSteps, regenPower, regenSpeed, sim]);
 
-  // ICE computed values at selected RPM
-  const iceTorque_Nm = interpICETorque(iceRpm);
-  const icePower_kW = iceTorque_Nm * iceRpm * 2 * Math.PI / 60 / 1000;
-  const iceFuelRate_gs = calcIceFuelStep(icePower_kW * 1000, iceBsfc, 1); // g/s at this power
-  const iceWheelTorque_Nm = iceTorque_Nm * iceGear * 0.97;
-
-  // ICE torque curve as chart data
-  const iceCurveData = useMemo(() =>
-    ICE_TORQUE_CURVE.map(([rpm, torque]) => ({
-      rpm,
-      torque_Nm: torque,
-      power_kW: torque * rpm * 2 * Math.PI / 60 / 1000,
-    })),
-    []
-  );
-
   const lastPoint = sim.data.length > 0 ? sim.data[sim.data.length - 1] : null;
 
   const addProfileStep = () => {
     setProfileSteps(prev => [...prev, { duration_s: 10, speed_kmh: 60, power_kW: 5 }]);
   };
-
   const removeProfileStep = (idx: number) => {
     setProfileSteps(prev => prev.filter((_, i) => i !== idx));
   };
-
   const updateProfileStep = (idx: number, field: keyof MotorProfileStep, val: number) => {
     setProfileSteps(prev => prev.map((step, i) =>
       i === idx ? { ...step, [field]: val } : step
@@ -210,126 +166,23 @@ export function MotorTab() {
 
   return (
     <div>
-      {/* Drivetrain type selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-        <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '2px' }}>Drivetrain</span>
-        {(['electric', 'ice'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setDrivetrainType(t)}
-            style={{
-              background: drivetrainType === t ? '#ffa726' : '#222',
-              color: drivetrainType === t ? '#000' : '#ccc',
-              border: '1px solid #444',
-              padding: '5px 14px',
-              fontSize: '12px',
-              fontWeight: drivetrainType === t ? 'bold' : 'normal',
-              cursor: 'pointer',
-            }}
-          >
-            {t === 'electric' ? 'Electric BLDC' : 'ICE Engine'}
-          </button>
-        ))}
-      </div>
 
-      {/* ICE Panel */}
-      {drivetrainType === 'ice' && (
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
-            {/* ICE Parameters */}
-            <div>
-              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
-                ICE Parameters (Yamaha MT-07 690cc)
-              </div>
-              <ParamGroup label="RPM" value={iceRpm} onChange={setIceRpm} min={500} max={11000} step={250} unit="" />
-              <ParamGroup label="BSFC" value={iceBsfc} onChange={setIceBsfc} min={200} max={600} step={10} unit="g/kWh" />
-              <ParamGroup label="Gear ratio" value={iceGear} onChange={setIceGear} min={1} max={10} step={0.1} unit="" />
-            </div>
-
-            {/* ICE Computed Values */}
-            <div>
-              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
-                Operating Point @ {iceRpm} RPM
-              </div>
-              <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 2.0 }}>
-                Torque = <span style={{ color: '#ffa726' }}>{iceTorque_Nm.toFixed(1)}</span> Nm<br />
-                Power = <span style={{ color: '#66bb6a' }}>{icePower_kW.toFixed(2)}</span> kW
-                <span style={{ color: '#888' }}> ({(icePower_kW * 1.341).toFixed(1)} hp)</span><br />
-                Wheel torque = <span style={{ color: '#4fc3f7' }}>{iceWheelTorque_Nm.toFixed(1)}</span> Nm (×{iceGear} gear)<br />
-                Fuel rate = <span style={{ color: '#ef5350' }}>{iceFuelRate_gs.toFixed(3)}</span> g/s
-                <span style={{ color: '#888' }}> ({(iceFuelRate_gs * 3.6).toFixed(2)} kg/h)</span><br />
-                Fuel per 10s = <span style={{ color: '#ef5350' }}>{(iceFuelRate_gs * 10).toFixed(1)}</span> g
-              </div>
-            </div>
-
-            {/* ICE Max Power Info */}
-            <div>
-              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
-                Engine Limits
-              </div>
-              <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 2.0 }}>
-                Peak torque = <span style={{ color: '#ffa726' }}>{Math.max(...ICE_TORQUE_CURVE.map(c => c[1])).toFixed(1)}</span> Nm @ ~6000 RPM<br />
-                Peak power ≈ <span style={{ color: '#66bb6a' }}>{Math.max(...iceCurveData.map(d => d.power_kW)).toFixed(1)}</span> kW<br />
-                Redline = <span style={{ color: '#ef5350' }}>{ICE_TORQUE_CURVE[ICE_TORQUE_CURVE.length - 1][0]}</span> RPM<br />
-                Displacement = <span style={{ color: '#888' }}>689 cc</span><br />
-                Type = <span style={{ color: '#888' }}>Inline 2 (MT-07)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ICE Torque + Power curves */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
-            <div>
-              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Torque Curve (Nm)</div>
-              <LineChart
-                data={iceCurveData}
-                series={[{ key: 'torque_Nm', color: '#ffa726', label: 'Torque' }]}
-                xKey="rpm"
-                height={180}
-                yUnit=" Nm"
-                xUnit=" rpm"
-                hLines={[{ value: iceTorque_Nm, color: 'rgba(255,167,38,0.4)' }]}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Power Curve (kW)</div>
-              <LineChart
-                data={iceCurveData}
-                series={[{ key: 'power_kW', color: '#66bb6a', label: 'Power' }]}
-                xKey="rpm"
-                height={180}
-                yUnit=" kW"
-                xUnit=" rpm"
-                hLines={[{ value: icePower_kW, color: 'rgba(102,187,106,0.4)' }]}
-              />
-            </div>
-          </div>
+      {/* ── Drivetrain parameters ─────────────────────────────────────────── */}
+      <div style={{
+        background: '#131318',
+        border: '1px solid #1e1e2e',
+        borderRadius: '4px',
+        padding: '20px',
+        marginBottom: '20px',
+      }}>
+        <div style={{
+          fontSize: '11px', color: '#fff', textTransform: 'uppercase',
+          letterSpacing: '2px', borderBottom: '1px solid #2a2a3a',
+          paddingBottom: '6px', marginBottom: '20px',
+        }}>
+          Drivetrain Parameters
         </div>
-      )}
-
-      {/* Electric drivetrain UI (hidden when ICE selected) */}
-      {drivetrainType === 'electric' && <>
-
-      {/* Config panels */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '20px' }}>
-        {/* Column 1: Pack config */}
-        <div>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
-            Battery Pack
-          </div>
-          <ParamGroup label="Series" value={series} onChange={setSeries} min={1} max={30} step={1} unit="s" />
-          <ParamGroup label="Parallel" value={parallel} onChange={setParallel} min={1} max={10} step={1} unit="p" />
-          <ParamGroup label="Capacity" value={capacity} onChange={setCapacity} min={0.5} max={20} step={0.1} unit="Ah" />
-          <ParamGroup label="V_max" value={vMax} onChange={setVMax} min={3.0} max={5.0} step={0.01} unit="V" />
-          <ParamGroup label="V_nom" value={vNom} onChange={setVNom} min={2.5} max={4.5} step={0.01} unit="V" />
-          <ParamGroup label="V_min" value={vMin} onChange={setVMin} min={2.0} max={3.5} step={0.01} unit="V" />
-          <ParamGroup label="R_cell" value={resistance} onChange={setResistance} min={1} max={200} step={1} unit="mOhm" />
-          <ParamGroup label="Cycles" value={cycles} onChange={setCycles} min={0} max={5000} step={50} unit="" />
-        </div>
-
-        {/* Column 2: Motor config */}
-        <MotorConfigPanel
+        <DrivetrainComparePanel
           kV={kV} setKV={setKV}
           Rw={Rw} setRw={setRw}
           gear={gear} setGear={setGear}
@@ -342,29 +195,49 @@ export function MotorTab() {
           etaEsc={etaEsc} setEtaEsc={setEtaEsc}
           etaRegen={etaRegen} setEtaRegen={setEtaRegen}
           etaMotor={etaMotor} setEtaMotor={setEtaMotor}
+          mCpMotor={mCpMotor} setMCpMotor={setMCpMotor}
+          rThMotor={rThMotor} setRThMotor={setRThMotor}
+          mCpEsc={mCpEsc} setMCpEsc={setMCpEsc}
+          rThEsc={rThEsc} setRThEsc={setRThEsc}
+          tAmb={tAmb} setTAmb={setTAmb}
+          iceRpm={iceRpm} setIceRpm={setIceRpm}
+          iceBsfc={iceBsfc} setIceBsfc={setIceBsfc}
+          iceGear={iceGear} setIceGear={setIceGear}
+          mass={mass}
         />
+      </div>
 
-        {/* Column 3: Thermal + Vehicle */}
+      {/* ── Battery pack + Vehicle ────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '20px' }}>
         <div>
-          <EscConfigPanel
-            mCpMotor={mCpMotor} setMCpMotor={setMCpMotor}
-            rThMotor={rThMotor} setRThMotor={setRThMotor}
-            mCpEsc={mCpEsc} setMCpEsc={setMCpEsc}
-            rThEsc={rThEsc} setRThEsc={setRThEsc}
-            tAmb={tAmb} setTAmb={setTAmb}
-          />
-          <div style={{ marginTop: '14px' }}>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
-              Vehicle
-            </div>
-            <ParamGroup label="Mass" value={mass} onChange={setMass} min={100} max={600} step={5} unit="kg" />
-            <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={2.0} step={0.01} unit="m2" />
-            <ParamGroup label="Crr" value={Crr} onChange={setCrr} min={0.005} max={0.05} step={0.001} unit="" />
+          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+            Battery Pack
+          </div>
+          <ParamGroup label="Series" value={series} onChange={setSeries} min={1} max={30} step={1} unit="s" />
+          <ParamGroup label="Parallel" value={parallel} onChange={setParallel} min={1} max={10} step={1} unit="p" />
+          <ParamGroup label="Capacity" value={capacity} onChange={setCapacity} min={0.5} max={20} step={0.1} unit="Ah" />
+          <ParamGroup label="V_max" value={vMax} onChange={setVMax} min={3.0} max={5.0} step={0.01} unit="V" infoTerm="V_batt" />
+          <ParamGroup label="V_nom" value={vNom} onChange={setVNom} min={2.5} max={4.5} step={0.01} unit="V" />
+          <ParamGroup label="V_min" value={vMin} onChange={setVMin} min={2.0} max={3.5} step={0.01} unit="V" />
+          <ParamGroup label="R_cell" value={resistance} onChange={setResistance} min={1} max={200} step={1} unit="mΩ" />
+          <ParamGroup label="Cycles" value={cycles} onChange={setCycles} min={0} max={5000} step={50} unit="" infoTerm="SoH_cap" />
+        </div>
+        <div>
+          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+            Vehicle
+          </div>
+          <ParamGroup label="Mass" value={mass} onChange={setMass} min={100} max={600} step={5} unit="kg" />
+          <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={2.0} step={0.01} unit="m²" infoTerm="CdA" />
+          <ParamGroup label="Crr" value={Crr} onChange={setCrr} min={0.005} max={0.05} step={0.001} unit="" infoTerm="Crr" />
+          <div style={{ marginTop: '10px', fontSize: '12px', color: '#ccc', lineHeight: 1.9 }}>
+            V_bat nom = <span style={{ color: '#ffca28' }}>{(vNom * series).toFixed(1)}</span> V<br />
+            V_bat max = <span style={{ color: '#ffca28' }}>{(vMax * series).toFixed(1)}</span> V<br />
+            Capacity = <span style={{ color: '#4fc3f7' }}>{(capacity * parallel).toFixed(1)}</span> Ah
           </div>
         </div>
       </div>
 
-      {/* Mode selector + controls */}
+      {/* ── Simulation mode ───────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '20px' }}>
         <div>
           <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
@@ -389,7 +262,6 @@ export function MotorTab() {
               </button>
             ))}
           </div>
-
           {mode === 'const' && (
             <>
               <ParamGroup label="Start speed" value={constSpeed} onChange={setConstSpeed} min={0} max={200} step={5} unit="km/h" />
@@ -403,8 +275,8 @@ export function MotorTab() {
             </>
           )}
           <ParamGroup label="Duration" value={duration} onChange={setDuration} min={1} max={3600} step={1} unit="s" />
-          <ParamGroup label="SOC_0" value={soc0} onChange={setSoc0} min={5} max={100} step={1} unit="%" />
-          <ParamGroup label="T_0" value={t0} onChange={setT0} min={-10} max={50} step={1} unit="C" />
+          <ParamGroup label="SOC_0" value={soc0} onChange={setSoc0} min={5} max={100} step={1} unit="%" infoTerm="SOC" />
+          <ParamGroup label="T_0" value={t0} onChange={setT0} min={-10} max={50} step={1} unit="°C" />
         </div>
 
         {mode === 'profile' && (
@@ -469,15 +341,14 @@ export function MotorTab() {
           <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 1.8 }}>
             Kt = <span style={{ color: '#4fc3f7' }}>{Kt.toFixed(4)}</span> Nm/A<br />
             V_bat nom = <span style={{ color: '#ffca28' }}>{(vNom * series).toFixed(1)}</span> V<br />
-            V_bat max = <span style={{ color: '#ffca28' }}>{(vMax * series).toFixed(1)}</span> V<br />
             RPM_max = <span style={{ color: '#4fc3f7' }}>{(kV * vNom * series).toFixed(0)}</span> RPM<br />
             T_motor = <span style={{ color: '#4fc3f7' }}>{(Kt * iPeak).toFixed(2)}</span> Nm @ I_peak<br />
-            Wheel speed = <span style={{ color: '#66bb6a' }}>{((kV * vNom * series) / gear / 60 * Math.PI * wheelD / 1000 * 3.6).toFixed(1)}</span> km/h @ RPM_max
+            Wheel speed = <span style={{ color: '#66bb6a' }}>{((kV * vNom * series) / gear / 60 * Math.PI * wheelD / 1000 * 3.6).toFixed(1)}</span> km/h
           </div>
         </div>
       </div>
 
-      {/* Control buttons */}
+      {/* ── Control buttons ───────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '14px' }}>
         <button
           onClick={handleStart}
@@ -507,13 +378,13 @@ export function MotorTab() {
         <span style={{ fontSize: '12px', color: '#888', marginLeft: '8px' }}>{sim.status}</span>
       </div>
 
-      {/* 75m result */}
+      {/* ── 75m result ────────────────────────────────────────────────────── */}
       <Acc75ResultBox result={sim.acc75Result} />
 
-      {/* Live values */}
+      {/* ── Live values ───────────────────────────────────────────────────── */}
       <MotorLiveValues data={sim.data} />
 
-      {/* Charts */}
+      {/* ── Charts ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         <div>
           <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Power (kW)</div>
@@ -567,7 +438,7 @@ export function MotorTab() {
             ]}
             xKey="t"
             height={180}
-            yUnit=" C"
+            yUnit=" °C"
           />
         </div>
       </div>
@@ -600,7 +471,7 @@ export function MotorTab() {
         </div>
       )}
 
-      {/* Efficiency map */}
+      {/* ── Efficiency map ────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '8px' }}>
           Efficiency Map
@@ -608,10 +479,8 @@ export function MotorTab() {
         <EfficiencyMap mc={motorConfig} pack={pack} lastPoint={lastPoint} />
       </div>
 
-      {/* Summary */}
+      {/* ── Summary ───────────────────────────────────────────────────────── */}
       <MotorSummaryTable data={sim.data} stats={sim.simStats} />
-
-      </> /* end electric drivetrain */}
     </div>
   );
 }

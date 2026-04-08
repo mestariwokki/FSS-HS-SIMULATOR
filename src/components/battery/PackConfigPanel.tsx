@@ -54,7 +54,7 @@ export function PackConfigPanel({
         </div>
         <PresetSelector presets={presets} selectedId={selectedPresetId} onSelect={onPresetSelect} />
         <ParamGroup label="Capacity" value={capacity} onChange={v => onChange('capacity', v)} min={0.1} max={100} step={0.1} unit="Ah" />
-        <ParamGroup label="V max" value={vMax} onChange={v => onChange('vMax', v)} min={3.0} max={5.0} step={0.01} unit="V" />
+        <ParamGroup label="V max" value={vMax} onChange={v => onChange('vMax', v)} min={3.0} max={5.0} step={0.01} unit="V" infoTerm="V_batt" />
         <ParamGroup label="V nom" value={vNom} onChange={v => onChange('vNom', v)} min={2.5} max={4.5} step={0.01} unit="V" />
         <ParamGroup label="V min" value={vMin} onChange={v => onChange('vMin', v)} min={2.0} max={4.0} step={0.01} unit="V" />
         <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #2a2a2a' }}>
@@ -79,7 +79,7 @@ export function PackConfigPanel({
         <div style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid #2a2a2a' }}>
           Pack
         </div>
-        <ParamGroup label="Series (S)" value={series} onChange={v => onChange('series', v)} min={1} max={40} step={1} unit="cells" />
+        <ParamGroup label="Series (S)" value={series} onChange={v => onChange('series', v)} min={1} max={40} step={1} unit="cells" infoTerm="V_batt" />
         <ParamGroup label="Parallel (P)" value={parallel} onChange={v => onChange('parallel', v)} min={1} max={20} step={1} unit="cells" />
         <ParamGroup label="Resistance" value={resistance} onChange={v => onChange('resistance', v)} min={1} max={500} step={1} unit="mOhm" />
         <ParamGroup label="Thermal mass" value={thermalMass} onChange={v => onChange('thermalMass', v)} min={10} max={20000} step={100} unit="J/K" />

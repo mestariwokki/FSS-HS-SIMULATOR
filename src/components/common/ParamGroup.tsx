@@ -1,3 +1,5 @@
+import { InfoTooltip } from './InfoTooltip';
+
 interface ParamGroupProps {
   label: string;
   value: number;
@@ -7,9 +9,11 @@ interface ParamGroupProps {
   step?: number;
   unit: string;
   title?: string;
+  /** Key in tooltips.ts to attach an InfoTooltip to the label */
+  infoTerm?: string;
 }
 
-export function ParamGroup({ label, value, onChange, min, max, step, unit, title }: ParamGroupProps) {
+export function ParamGroup({ label, value, onChange, min, max, step, unit, title, infoTerm }: ParamGroupProps) {
   return (
     <div style={{
       display: 'flex',
@@ -26,7 +30,9 @@ export function ParamGroup({ label, value, onChange, min, max, step, unit, title
           minWidth: '110px',
         }}
       >
-        {label}
+        {infoTerm
+          ? <InfoTooltip term={infoTerm} label={label} />
+          : label}
       </label>
       <input
         type="number"

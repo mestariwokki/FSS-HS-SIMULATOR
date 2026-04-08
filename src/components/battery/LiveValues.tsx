@@ -32,13 +32,13 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
         Pack -- {pack.series}S{pack.parallel}P
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-        <ValueBox label="SOC" value={soc.toFixed(1)} unit="%" color="blue" />
-        <ValueBox label="V OCV" value={voc.toFixed(2)} unit="V" />
-        <ValueBox label="V Terminal" value={vt.toFixed(2)} unit="V" color="green" />
-        <ValueBox label="Current" value={i.toFixed(1)} unit="A" color="red" />
+        <ValueBox label="SOC" value={soc.toFixed(1)} unit="%" color="blue" infoTerm="SOC" />
+        <ValueBox label="V OCV" value={voc.toFixed(2)} unit="V" infoTerm="V_oc" />
+        <ValueBox label="V Terminal" value={vt.toFixed(2)} unit="V" color="green" infoTerm="V_batt" />
+        <ValueBox label="Current" value={i.toFixed(1)} unit="A" color="red" infoTerm="I_batt" />
         <ValueBox label="Power" value={pFormatted.val} unit={pFormatted.unit} color="yellow" />
         <ValueBox label="C-rate" value={cRate} unit="C" />
-        <ValueBox label="T cell" value={tC.toFixed(1)} unit="C" color="orange" />
+        <ValueBox label="T cell" value={tC.toFixed(1)} unit="C" color="orange" infoTerm="T_batt" />
         <ValueBox label="Ah used" value={Math.abs(simState.ah).toFixed(3)} unit="Ah" />
       </div>
 
@@ -53,7 +53,7 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
             <ValueBox label="x_neg (Graphite)" value={last.xn.toFixed(4)} unit="" fontSize="17px" />
             <ValueBox label="U_pos OCP" value={last.up.toFixed(4)} unit="V" color="yellow" fontSize="17px" />
             <ValueBox label="U_neg OCP" value={last.un.toFixed(4)} unit="V" fontSize="17px" />
-            <ValueBox label="eta_pos" value={last.eta_pos.toFixed(1)} unit="mV" color="yellow" fontSize="17px" />
+            <ValueBox label="eta_pos" value={last.eta_pos.toFixed(1)} unit="mV" color="yellow" fontSize="17px" infoTerm="eta_pos" />
             <ValueBox label="eta_neg" value={last.eta_neg.toFixed(1)} unit="mV" color="green" fontSize="17px" />
           </div>
         </div>
@@ -64,9 +64,9 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
         SoH -- Aging (2RC ECM)
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-        <ValueBox label="SOH_cap" value={(ecm.soh_cap * 100).toFixed(1)} unit="%" color="green" />
-        <ValueBox label="SOH_res" value={((1 / ecm.soh_res) * 100).toFixed(1)} unit="%" color="yellow" />
-        <ValueBox label="V_RC tot (2RC)" value={(simState.V_RC + simState.V_RC2).toFixed(3)} unit="V" color="purple" fontSize="16px" />
+        <ValueBox label="SOH_cap" value={(ecm.soh_cap * 100).toFixed(1)} unit="%" color="green" infoTerm="SoH_cap" />
+        <ValueBox label="SOH_res" value={((1 / ecm.soh_res) * 100).toFixed(1)} unit="%" color="yellow" infoTerm="SoH_res" />
+        <ValueBox label="V_RC tot (2RC)" value={(simState.V_RC + simState.V_RC2).toFixed(3)} unit="V" color="purple" fontSize="16px" infoTerm="V_RC" />
         <ValueBox label="Q_eff" value={(pack.capacity_Ah * ecm.soh_cap).toFixed(2)} unit="Ah" fontSize="16px" />
       </div>
 
