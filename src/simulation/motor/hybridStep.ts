@@ -151,7 +151,7 @@ export function hybridStep(
   const F_em_max = Math.min(F_em_motor_max, F_em_trac_limit);
 
   // ── ICE-kyky (takaakseli) ─────────────────────────────────────────────────
-  const ice_on = state.t >= cfg.ice_start_delay_s && RPM_ice >= cfg.ice_rpm_min;
+  const ice_on = true; // ICE aina päällä — ensisijainen teholähde
   let T_ice_shaft = 0;
   if (ice_on) T_ice_shaft = interpICETorque(RPM_ice);
   const T_ice_avail = T_ice_shaft * cfg.ice_gear * 0.97;
@@ -167,16 +167,17 @@ export function hybridStep(
     ? P_demand_override / 1000
     : P_avail_kW;   // täysi kaasu
 
-  // ── EM-ensin -strategia ───────────────────────────────────────────────────
+  // ── ICE-ensin -strategia ──────────────────────────────────────────────────
+  // ICE kattaa kysynnän ensin; EM täydentää vain ylikuormassa
   const F_demand = P_demand_kW > 0 ? P_demand_kW * 1000 / v : 0;
-  let F_em_use: number;
   let F_ice_use: number;
-  if (F_demand <= F_em_max) {
-    F_em_use = Math.max(0, F_demand);
-    F_ice_use = 0;
+  let F_em_use: number;
+  if (F_demand <= F_ice_max) {
+    F_ice_use = Math.max(0, F_demand);
+    F_em_use = 0;
   } else {
-    F_em_use = F_em_max;
-    F_ice_use = Math.min(F_demand - F_em_use, F_ice_max);
+    F_ice_use = F_ice_max;
+    F_em_use = Math.min(F_demand - F_ice_use, F_em_max);
   }
 
   const T_em_act = F_em_use * cfg.wheel_r_m;
