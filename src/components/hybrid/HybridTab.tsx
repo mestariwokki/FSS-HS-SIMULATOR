@@ -61,9 +61,11 @@ const MODE_LABELS: Record<HybridSimMode, string> = {
 export function HybridTab() {
 
   // ── EM params ────────────────────────────────────────────────────────────
-  const [P_em_peak, setP_em_peak] = useState(10.0);
+  // Neumotors 6530/8.5/104 × 2 kpl, planeettavaihde 3:1
+  // T_peak/pyörä = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 7 kW | P_cont = 2 × 3.5 kW
+  const [P_em_peak, setP_em_peak] = useState(14.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
-  const [T_em_peak, setT_em_peak] = useState(400);    // Nm at wheel
+  const [T_em_peak, setT_em_peak] = useState(45);     // Nm at wheel (2 × 7.5 Nm × gear 3:1)
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
 
