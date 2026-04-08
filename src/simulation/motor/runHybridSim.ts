@@ -70,6 +70,10 @@ export function runHybridSim(inp: HybridSimInput): {
       }
     }
 
+    const x_before = st.x_m;
+    const v_before = st.v_ms;
+    const t_before = st.t;
+
     const { state: ns, point } = hybridStep(st, inp, P_demand, DT);
     data.push(point);
     st = ns;
@@ -80,11 +84,15 @@ export function runHybridSim(inp: HybridSimInput): {
     if (point.eta_sys > 0) { eta_sum += point.eta_sys; eta_n++; }
 
     if (t100 === null && st.v_ms >= 100 / 3.6) {
-      t100 = st.t;
+      // Interpoloi tarkka ylityspiste
+      const frac = (100 / 3.6 - v_before) / (st.v_ms - v_before);
+      t100 = t_before + frac * DT;
     }
 
     if (t75m === null && st.x_m >= 75) {
-      t75m = st.t;
+      // Interpoloi tarkka ylityspiste
+      const frac = (75 - x_before) / (st.x_m - x_before);
+      t75m = t_before + frac * DT;
     }
 
     if (inp.mode === 'acc100' && t100 !== null) break;
