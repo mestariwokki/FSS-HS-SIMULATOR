@@ -68,7 +68,8 @@ export function HybridTab() {
   const [eta_regen, setEtaRegen] = useState(0.80);
 
   // ── ICE params ────────────────────────────────────────────────────────────
-  const [ice_gear, setIceGear] = useState(3.5);
+  // ice_gear = kokonaisvälitys: ie(1.925) × iv1(2.846) × io(1.733) = 9.50 (1. vaihde, kuiva keli)
+  const [ice_gear, setIceGear] = useState(9.5);
   const [bsfc, setBsfc] = useState(300);
   const [ice_start_delay, setIceStartDelay] = useState(0.5);
   const [ice_rpm_min, setIceRpmMin] = useState(1500);
@@ -80,15 +81,15 @@ export function HybridTab() {
   const [pack_T_celsius, setPackTemp] = useState(25);
   const [soc0, setSoc0] = useState(100);
 
-  // ── Vehicle ───────────────────────────────────────────────────────────────
-  const [mass, setMass] = useState(300);
-  const [wheel_r, setWheelR] = useState(0.200);
-  const [CdA, setCdA] = useState(0.96);
-  const [Crr, setCrr] = useState(0.015);
-  const [mu, setMu] = useState(1.60);
-  const [h_cg, setHcg] = useState(0.30);
-  const [wheelbase, setWheelbase] = useState(1.55);
-  const [f_front, setFFront] = useState(0.45);
+  // ── Vehicle — M06H lähtötiedot (Ajotilapiirros_Drive_diagram_FSOM06H_2026.xlsx) ──
+  const [mass, setMass] = useState(285);       // kg, sis. kuljettaja (210+75)
+  const [wheel_r, setWheelR] = useState(0.199); // m, dynaaminen vierintäsäde 16x7.5-10
+  const [CdA, setCdA] = useState(0.98);         // m², A=1.225 × cA=0.80
+  const [Crr, setCrr] = useState(0.018);        // vierintävastuskerroin
+  const [mu, setMu] = useState(1.60);           // kitka (slick, kuiva)
+  const [h_cg, setHcg] = useState(0.32);        // m, painopiste korkeus (320 mm)
+  const [wheelbase, setWheelbase] = useState(1.55); // m, akseliväli
+  const [f_front, setFFront] = useState(0.39);  // etupainojako 38.7 %
 
   // ── Sim mode ──────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<HybridSimMode>('acc75');
