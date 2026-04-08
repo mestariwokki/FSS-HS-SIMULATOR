@@ -50,6 +50,13 @@ function ChartLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const MODE_LABELS: Record<HybridSimMode, string> = {
+  acc75:    '75 m (FS)',
+  acc100:   '0–100 km/h',
+  cruise:   'Vakionopeus',
+  duration: 'Kesto',
+};
+
 // ── Main component ────────────────────────────────────────────────────────
 export function HybridTab() {
 
@@ -66,21 +73,25 @@ export function HybridTab() {
   const [ice_start_delay, setIceStartDelay] = useState(0.5);
   const [ice_rpm_min, setIceRpmMin] = useState(1500);
 
-  // ── Battery ───────────────────────────────────────────────────────────────
+  // ── Battery — 2RC Thevenin ────────────────────────────────────────────────
   const [pack_series, setPackSeries] = useState(13);
-  const [pack_R_mOhm, setPackR] = useState(24);
+  const [pack_parallel, setPackParallel] = useState(1);
   const [pack_Q_Ah, setPackQ] = useState(13.2);
+  const [pack_T_celsius, setPackTemp] = useState(25);
   const [soc0, setSoc0] = useState(100);
 
   // ── Vehicle ───────────────────────────────────────────────────────────────
   const [mass, setMass] = useState(300);
   const [wheel_r, setWheelR] = useState(0.200);
-  const [CdA, setCdA] = useState(0.40);
+  const [CdA, setCdA] = useState(0.96);
   const [Crr, setCrr] = useState(0.015);
   const [mu, setMu] = useState(1.60);
+  const [h_cg, setHcg] = useState(0.30);
+  const [wheelbase, setWheelbase] = useState(1.55);
+  const [f_front, setFFront] = useState(0.45);
 
   // ── Sim mode ──────────────────────────────────────────────────────────────
-  const [mode, setMode] = useState<HybridSimMode>('acc100');
+  const [mode, setMode] = useState<HybridSimMode>('acc75');
   const [duration, setDuration] = useState(20);
   const [cruise_spd, setCruiseSpd] = useState(80);
   const [showComponents, setShowComponents] = useState(false);
@@ -95,6 +106,7 @@ export function HybridTab() {
   const icePeakPower = Math.max(
     ...ICE_TORQUE_CURVE.map(([rpm, T]: [number, number]) => T * rpm * 2 * Math.PI / 60 / 1000)
   );
+
   // ── Auto-run on param change (debounced 450 ms) ───────────────────────────
   const runSim = useCallback(() => {
     const t0 = performance.now();
@@ -109,13 +121,17 @@ export function HybridTab() {
       ice_start_delay_s: ice_start_delay,
       ice_rpm_min,
       pack_series,
-      pack_R_Ohm: pack_R_mOhm / 1000,
+      pack_parallel,
       pack_Q_Ah,
+      pack_T_celsius,
       mass_kg: mass,
       wheel_r_m: wheel_r,
       CdA_m2: CdA,
       Crr,
       mu,
+      h_cg_m: h_cg,
+      wheelbase_m: wheelbase,
+      f_front,
       mode,
       soc0_pct: soc0,
       duration_s: duration,
@@ -127,8 +143,8 @@ export function HybridTab() {
   }, [
     P_em_peak, P_em_cont, T_em_peak, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
-    pack_series, pack_R_mOhm, pack_Q_Ah, soc0,
-    mass, wheel_r, CdA, Crr, mu,
+    pack_series, pack_parallel, pack_Q_Ah, pack_T_celsius, soc0,
+    mass, wheel_r, CdA, Crr, mu, h_cg, wheelbase, f_front,
     mode, duration, cruise_spd,
   ]);
 
@@ -151,11 +167,11 @@ export function HybridTab() {
             Hybridijärjestelmä — Yhdistetty Simulaatio
           </div>
           <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>
-            Sähkömoottori + ICE (MT-07 690cc) · reaaliaikainen laskenta
+            Sähkömoottori + ICE (MT-07 690cc) · 2RC Thevenin akkumalli · reaaliaikainen laskenta
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {(['acc100', 'cruise', 'duration'] as HybridSimMode[]).map(m => (
+          {(['acc75', 'acc100', 'cruise', 'duration'] as HybridSimMode[]).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
@@ -168,7 +184,7 @@ export function HybridTab() {
                 textTransform: 'uppercase', letterSpacing: '1px',
               }}
             >
-              {m === 'acc100' ? '0–100 km/h' : m === 'cruise' ? 'Vakionopeus' : 'Kesto'}
+              {MODE_LABELS[m]}
             </button>
           ))}
           <span style={{ fontSize: '10px', color: '#444', marginLeft: '8px' }}>
@@ -231,9 +247,17 @@ export function HybridTab() {
             </div>
             <ParamGroup label="Massa" value={mass} onChange={setMass} min={100} max={700} step={5} unit="kg" />
             <ParamGroup label="Pyörän säde" value={wheel_r} onChange={setWheelR} min={0.10} max={0.40} step={0.005} unit="m" />
-            <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={1.5} step={0.01} unit="m²" infoTerm="CdA" />
+            <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={2.0} step={0.01} unit="m²" infoTerm="CdA" />
             <ParamGroup label="Crr" value={Crr} onChange={setCrr} min={0.005} max={0.05} step={0.001} unit="" infoTerm="Crr" />
             <ParamGroup label="μ (kitka)" value={mu} onChange={setMu} min={0.5} max={2.5} step={0.05} unit="" infoTerm="mu" />
+            <SHead>Ajoneuvodynamiikka</SHead>
+            <ParamGroup label="h_CG" value={h_cg} onChange={setHcg} min={0.10} max={0.70} step={0.01} unit="m" />
+            <ParamGroup label="Akseliväli" value={wheelbase} onChange={setWheelbase} min={1.0} max={2.5} step={0.01} unit="m" />
+            <ParamGroup label="Etupainojako" value={f_front} onChange={setFFront} min={0.30} max={0.70} step={0.01} unit="" />
+            <div style={{ marginTop: '6px', padding: '5px 8px', background: '#111', borderRadius: '2px', fontSize: '10px', color: '#666', lineHeight: 1.6 }}>
+              Etuakseli: 2× napamoottori (EM)<br />
+              Takaakseli: ICE + vaihteisto
+            </div>
           </div>
 
           {/* Battery */}
@@ -242,16 +266,20 @@ export function HybridTab() {
             borderRadius: '3px', padding: '12px 14px', marginBottom: '10px',
           }}>
             <div style={{ fontSize: '11px', color: '#ce93d8', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Akku
+              Akku — 2RC Thevenin
             </div>
-            <ParamGroup label="Kennojen sarja" value={pack_series} onChange={setPackSeries} min={1} max={30} step={1} unit="S" infoTerm="V_batt" />
+            <ParamGroup label="Sarja (S)" value={pack_series} onChange={setPackSeries} min={1} max={30} step={1} unit="S" infoTerm="V_batt" />
+            <ParamGroup label="Rinnakkain (P)" value={pack_parallel} onChange={setPackParallel} min={1} max={10} step={1} unit="P" />
             <ParamGroup label="Kapasiteetti" value={pack_Q_Ah} onChange={setPackQ} min={1} max={100} step={0.5} unit="Ah" />
-            <ParamGroup label="Sisäresistanssi" value={pack_R_mOhm} onChange={setPackR} min={1} max={500} step={1} unit="mΩ" />
-            <ParamGroup label="SOC_0" value={soc0} onChange={setSoc0} min={10} max={100} step={1} unit="%" infoTerm="SOC" />
+            <ParamGroup label="Lämpötila" value={pack_T_celsius} onChange={setPackTemp} min={-20} max={60} step={1} unit="°C" />
+            <ParamGroup label="SOC₀" value={soc0} onChange={setSoc0} min={10} max={100} step={1} unit="%" infoTerm="SOC" />
+            <div style={{ marginTop: '8px', padding: '6px 8px', background: '#111', borderRadius: '2px', fontSize: '11px', color: '#888', lineHeight: 1.7 }}>
+              NMC R0/R1/R2 haetaan SOC-taulukosta · lämpötilakorjaus R0:lle
+            </div>
           </div>
 
           {/* Mode-specific params */}
-          {mode !== 'acc100' && (
+          {(mode === 'cruise' || mode === 'duration') && (
             <div style={{
               background: '#131318', border: '1px solid #2a2a3a',
               borderRadius: '3px', padding: '12px 14px',
@@ -280,6 +308,12 @@ export function HybridTab() {
                 Yhteenveto
               </div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <SCard
+                  label="0→75 m (FS kiihdytys)"
+                  value={summary.t75m_s !== null ? summary.t75m_s.toFixed(3) : '—'}
+                  unit="s"
+                  color="#ffa726"
+                />
                 <SCard
                   label="0→100 km/h"
                   value={summary.t100_s !== null ? summary.t100_s.toFixed(2) : '—'}
@@ -484,7 +518,25 @@ export function HybridTab() {
             </div>
           )}
 
-          {/* ── Chart 6: Battery electrical ─────────────────────────────── */}
+          {/* ── Chart 6: Axle normal forces ─────────────────────────────── */}
+          {showComponents && (
+            <div style={{ marginBottom: '16px' }}>
+              <ChartLabel>Akselinormaalivoima — painonsiirto (N)</ChartLabel>
+              <LineChart
+                data={d}
+                series={[
+                  { key: 'N_f', color: '#4fc3f7', label: 'N_f (EM)', lineWidth: 2 },
+                  { key: 'N_r', color: '#ffa726', label: 'N_r (ICE)', lineWidth: 2 },
+                ]}
+                xKey="t"
+                height={160}
+                yUnit=" N"
+                yMin={0}
+              />
+            </div>
+          )}
+
+          {/* ── Chart 7: Battery electrical ─────────────────────────────── */}
           {showComponents && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
@@ -502,7 +554,11 @@ export function HybridTab() {
                 <ChartLabel>Akkujännite (V)</ChartLabel>
                 <LineChart
                   data={d}
-                  series={[{ key: 'V_bat', color: '#ffca28', label: 'V_bat' }]}
+                  series={[
+                    { key: 'V_bat', color: '#ffca28', label: 'V_bat' },
+                    { key: 'V_rc1', color: '#ef9a9a', label: 'V_rc1', lineWidth: 1, dashed: true },
+                    { key: 'V_rc2', color: '#f48fb1', label: 'V_rc2', lineWidth: 1, dashed: true },
+                  ]}
                   xKey="t"
                   height={150}
                   yUnit=" V"

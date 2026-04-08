@@ -1,33 +1,58 @@
-import { ocvPack } from '../ocv';
+/**
+ * Voimansiirtoarkkitehtuuri:
+ *
+ * ETUAKSELI — 2× napamoottori (hub motor), suoravetoinen, ei vaihteistoa
+ *   → EM-voima rajoitettu etuakselin normaalivoimalla N_f
+ *   → Kiihdytyksessä paino siirtyy taakse → N_f pienenee → EM:n rajoite
+ *   → Matalalla nopeudella EM on dominoiva (korkea vääntö, hyvä etupidon käyttöaste)
+ *
+ * TAKAAKSELI — ICE → vaihteisto → tasauspyörästö
+ *   → ICE-voima rajoitettu takaakselin normaalivoimalla N_r
+ *   → Kiihdytyksessä paino siirtyy taakse → N_r kasvaa → ICE hyötyy
+ *   → Korkeilla nopeuksilla ICE on dominoiva
+ *
+ * Oskillaation esto: painonsiirto lasketaan eksponentiaalisesti suodatetulla
+ * kiihtyvyydellä (α = 0.12, τ ≈ 0.4 s). Napamoottorit reagoivat sähköisesti
+ * nopeasti, mutta renkaiden pito muuttuu mekaanisesti hitaasti — hidas suodatus
+ * on fysikaalisesti perusteltu, ei pelkkä numeerinen kikka.
+ */
 import { interpICETorque, calcIceFuelStep } from './iceEngine';
+import { battery2RCStep, packMaxPowerW } from '../battery';
+
+const ALPHA_WEIGHT = 0.12;  // suodatuskerroin painonsiirrolle, τ ≈ dt/α ≈ 0.42 s
 
 // ── Config ────────────────────────────────────────────────────────────────
 
 export interface HybridConfig {
-  // Electric motor (high-level, combined n_motors values at wheel)
-  P_em_peak_kW: number;   // total EM peak power
-  P_em_cont_kW: number;   // total EM continuous power
-  T_em_peak_Nm: number;   // max wheel torque from EM (at low speed)
-  eta_em: number;         // combined ESC + winding efficiency (elec→mech)
+  // Sähkömoottori (etuakseli, 2× napamoottori, yhteisarvo)
+  P_em_peak_kW: number;   // yhteinen EM-huipputeho
+  P_em_cont_kW: number;   // yhteinen EM-jatkuvateho
+  T_em_peak_Nm: number;   // max pyörävääntö EM:ltä (matalilla nopeuksilla)
+  eta_em: number;         // ESC + käämitys hyötysuhde (sähkö→mekaniikka)
   eta_regen: number;
 
-  // ICE
-  ice_gear: number;       // ICE shaft → wheel gear ratio (incl. final drive)
-  bsfc_gkWh: number;      // brake-specific fuel consumption
+  // ICE (takaakseli)
+  ice_gear: number;       // ICE-akseli → pyörä välityssuhde (sis. loppuvälityksen)
+  bsfc_gkWh: number;      // ominaiskulutus [g/kWh]
   ice_start_delay_s: number;
-  ice_rpm_min: number;    // below this wheel-implied RPM, ICE cannot contribute
+  ice_rpm_min: number;    // alla tämän ICE ei voi tuottaa momenttia
 
-  // Battery
+  // Akku — 2RC Thevenin
   pack_series: number;
-  pack_R_Ohm: number;
+  pack_parallel: number;
   pack_Q_Ah: number;
+  pack_T_celsius: number;
 
-  // Vehicle
+  // Ajoneuvo
   mass_kg: number;
   wheel_r_m: number;
   CdA_m2: number;
   Crr: number;
   mu: number;
+  // Ajoneuvodynamiikka (painonsiirto)
+  h_cg_m: number;         // massakeskipisteen korkeus [m]
+  wheelbase_m: number;    // akseliväli [m]
+  f_front: number;        // staattinen etuakselipaino-osuus [0–1]
 }
 
 // ── State ─────────────────────────────────────────────────────────────────
@@ -37,10 +62,13 @@ export interface HybridState {
   v_ms: number;
   x_m: number;
   soc: number;
-  wh_em: number;     // cumulative Wh drawn from battery
-  wh_mech: number;   // cumulative mechanical Wh delivered to wheels
-  fuel_g: number;    // cumulative fuel consumed (g)
-  boost_t: number;   // seconds EM has been at/above P_em_cont
+  wh_em: number;
+  wh_mech: number;
+  fuel_g: number;
+  boost_t: number;
+  V_rc1: number;
+  V_rc2: number;
+  a_smooth: number;   // suodatettu kiihtyvyys painonsiirtoa varten [m/s²]
 }
 
 // ── Output point ──────────────────────────────────────────────────────────
@@ -50,27 +78,25 @@ export interface HybridPoint {
   v_kmh: number;
   a_ms2: number;
   x_m: number;
-  // Power split
   P_demand_kW: number;
   P_em_kW: number;
   P_ice_kW: number;
   P_total_kW: number;
-  // Torques at wheel
   T_em_Nm: number;
   T_ice_Nm: number;
   T_total_Nm: number;
-  // RPM
   RPM_wheel: number;
   RPM_ice: number;
-  // Battery
+  N_f: number;        // etuakselin normaalivoima [N]
+  N_r: number;        // takaakselin normaalivoima [N]
   soc: number;
   I_bat: number;
   V_bat: number;
+  V_rc1: number;
+  V_rc2: number;
   wh_em: number;
-  // Fuel
   fuel_g: number;
   wh_mech: number;
-  // Flags
   eta_sys: number;
   is_hybrid: boolean;
 }
@@ -80,125 +106,142 @@ export interface HybridPoint {
 export function hybridStep(
   state: HybridState,
   cfg: HybridConfig,
-  P_demand_override: number | null,  // null = full throttle, else watts requested
+  P_demand_override: number | null,
   dt: number,
 ): { state: HybridState; point: HybridPoint } {
 
   const v = Math.max(0.05, state.v_ms);
-  const omega_wheel = v / cfg.wheel_r_m;                       // rad/s at wheel
+  const omega_wheel = v / cfg.wheel_r_m;
   const RPM_wheel = omega_wheel * 60 / (2 * Math.PI);
   const RPM_ice = Math.max(500, RPM_wheel * cfg.ice_gear);
 
-  // ── EM capability (torque at wheel) ──────────────────────────────────────
-  const P_em_avail_kW = state.boost_t < 5.0 ? cfg.P_em_peak_kW : cfg.P_em_cont_kW;
-  // Torque limited by both current limit and power limit
-  const T_em_power_limit = P_em_avail_kW * 1000 / omega_wheel;
-  const T_em_avail = Math.min(cfg.T_em_peak_Nm, T_em_power_limit);
+  // ── Painonsiirto (eksponentiaalisesti suodatettu kiihtyvyys) ──────────────
+  // Käytetään edellisen askeleen suodatettua kiihtyvyyttä → ei oskillaatiota
+  const a_p = state.a_smooth;
+  const F_grav = cfg.mass_kg * 9.81;
+  const dN = cfg.mass_kg * a_p * cfg.h_cg_m / cfg.wheelbase_m;
+  const N_f = Math.max(0, F_grav * cfg.f_front - dN);    // etuakseli
+  const N_r = Math.max(0, F_grav * (1 - cfg.f_front) + dN); // takaakseli
 
-  // ── ICE capability (torque at wheel) ─────────────────────────────────────
+  // ── Etuakselin EM-traktiorajoitus (napamoottorit, ei differentiaalia) ─────
+  // Kummallekin etupyörälle puolet voimasta, mutta normaalikuorma on symmetrinen
+  // → sama tulos kuin yhteinen rajoite mu * N_f
+  const F_em_trac_limit = cfg.mu * N_f;
+
+  // ── Takaakselin ICE-traktiorajoitus ──────────────────────────────────────
+  const F_ice_trac_limit = cfg.mu * N_r;
+
+  // ── Akun hetkellinen tehokapasiteetti ────────────────────────────────────
+  // P_max = V_eff² / (4·R0)   (matched-impedance maksimiteho)
+  const P_bat_max_W = packMaxPowerW(
+    state.soc, state.V_rc1, state.V_rc2,
+    cfg.pack_series, cfg.pack_parallel, cfg.pack_T_celsius,
+  );
+  const P_em_bat_limit_kW = P_bat_max_W * cfg.eta_em / 1000;
+
+  // ── EM-kyky (etuakseli) ───────────────────────────────────────────────────
+  // Vuoheikennusmalli: T_max(ω) = min(T_peak, P_avail/ω)
+  const P_em_avail_kW = Math.min(
+    state.boost_t < 5.0 ? cfg.P_em_peak_kW : cfg.P_em_cont_kW,
+    P_em_bat_limit_kW,   // akkurajoite
+  );
+  const T_em_power_limit = P_em_avail_kW * 1000 / omega_wheel;
+  const T_em_motor_limit = Math.min(cfg.T_em_peak_Nm, T_em_power_limit);
+  const F_em_motor_max = T_em_motor_limit / cfg.wheel_r_m;
+  const F_em_max = Math.min(F_em_motor_max, F_em_trac_limit);
+
+  // ── ICE-kyky (takaakseli) ─────────────────────────────────────────────────
   const ice_on = state.t >= cfg.ice_start_delay_s && RPM_ice >= cfg.ice_rpm_min;
   let T_ice_shaft = 0;
-  let T_ice_avail = 0;
-  if (ice_on) {
-    T_ice_shaft = interpICETorque(RPM_ice);
-    T_ice_avail = T_ice_shaft * cfg.ice_gear * 0.97;   // mech efficiency
-  }
+  if (ice_on) T_ice_shaft = interpICETorque(RPM_ice);
+  const T_ice_avail = T_ice_shaft * cfg.ice_gear * 0.97;
+  const F_ice_motor_max = T_ice_avail / cfg.wheel_r_m;
+  const F_ice_max = Math.min(F_ice_motor_max, F_ice_trac_limit);
 
-  // ── Hybrid control ────────────────────────────────────────────────────────
-  // P_demand: in full-throttle mode this is total available; in cruise it's the
-  // minimum needed to maintain speed.
-  const P_em_max_kW = T_em_avail * omega_wheel / 1000;
-  const P_ice_max_kW = T_ice_avail * omega_wheel / 1000;
+  // ── Tehopyynnön laskenta ──────────────────────────────────────────────────
+  const P_em_max_kW = F_em_max * v / 1000;
+  const P_ice_max_kW = F_ice_max * v / 1000;
   const P_avail_kW = P_em_max_kW + P_ice_max_kW;
 
   const P_demand_kW = P_demand_override !== null
     ? P_demand_override / 1000
-    : P_avail_kW;   // full throttle
+    : P_avail_kW;   // täysi kaasu
 
-  let P_em_kW: number;
-  let P_ice_kW: number;
-
-  if (P_demand_kW <= P_em_max_kW) {
-    P_em_kW = Math.max(0, P_demand_kW);
-    P_ice_kW = 0;
+  // ── EM-ensin -strategia ───────────────────────────────────────────────────
+  const F_demand = P_demand_kW > 0 ? P_demand_kW * 1000 / v : 0;
+  let F_em_use: number;
+  let F_ice_use: number;
+  if (F_demand <= F_em_max) {
+    F_em_use = Math.max(0, F_demand);
+    F_ice_use = 0;
   } else {
-    P_em_kW = P_em_max_kW;
-    P_ice_kW = Math.min(P_demand_kW - P_em_kW, P_ice_max_kW);
+    F_em_use = F_em_max;
+    F_ice_use = Math.min(F_demand - F_em_use, F_ice_max);
   }
 
-  // Wheel torques from power
-  const T_em_used = P_em_kW * 1000 / omega_wheel;
-  const T_ice_used = P_ice_kW * 1000 / omega_wheel;
-  const T_total_used = T_em_used + T_ice_used;
-
-  // ── Traction limit ────────────────────────────────────────────────────────
-  const F_traction_raw = T_total_used / cfg.wheel_r_m;
-  const F_traction_limit = cfg.mu * cfg.mass_kg * 9.81;
-  const F_traction = Math.min(F_traction_raw, F_traction_limit);
-  const trac_scale = F_traction_raw > 0 ? F_traction / F_traction_raw : 1;
-
-  const T_em_act = T_em_used * trac_scale;
-  const T_ice_act = T_ice_used * trac_scale;
+  const T_em_act = F_em_use * cfg.wheel_r_m;
+  const T_ice_act = F_ice_use * cfg.wheel_r_m;
   const P_em_act_kW = T_em_act * omega_wheel / 1000;
   const P_ice_act_kW = T_ice_act * omega_wheel / 1000;
   const P_total_act_kW = P_em_act_kW + P_ice_act_kW;
 
-  // ── Resistance forces ─────────────────────────────────────────────────────
+  // ── Pitkittäisdynamiikka ──────────────────────────────────────────────────
+  // F_drag = ½ · ρ · CdA · v²   (ρ = 1.225 kg/m³)
+  // F_roll = Crr · m · g
+  const F_traction = F_em_use + F_ice_use;
   const F_drag = 0.5 * 1.225 * cfg.CdA_m2 * v * v;
   const F_roll = cfg.Crr * cfg.mass_kg * 9.81;
-
-  // ── Net acceleration ──────────────────────────────────────────────────────
   const F_net = F_traction - F_drag - F_roll;
   const a = F_net / cfg.mass_kg;
 
-  // ── Battery (EM electrical) ───────────────────────────────────────────────
-  const V_oc = ocvPack(state.soc, cfg.pack_series);
+  // Suodatettu kiihtyvyys seuraavaa painonsiirtoaskelta varten
+  const a_smooth_new = state.a_smooth * (1 - ALPHA_WEIGHT) + a * ALPHA_WEIGHT;
+
+  // ── Akku — 2RC Thevenin ───────────────────────────────────────────────────
   const P_bat_W = P_em_act_kW * 1000 / Math.max(0.5, cfg.eta_em);
+  const batResult = battery2RCStep(
+    state.soc, state.wh_em,
+    state.V_rc1, state.V_rc2,
+    cfg.pack_series, cfg.pack_parallel,
+    cfg.pack_Q_Ah, cfg.pack_T_celsius,
+    P_bat_W, dt,
+  );
 
-  // Quadratic solve: P_bat = V_oc*I - I²*R  →  I²*R - V_oc*I + P_bat = 0
-  const disc = V_oc * V_oc - 4 * cfg.pack_R_Ohm * P_bat_W;
-  let I_bat: number;
-  if (disc < 0) {
-    I_bat = V_oc / (2 * cfg.pack_R_Ohm);   // current-limited
-  } else {
-    I_bat = (V_oc - Math.sqrt(disc)) / (2 * cfg.pack_R_Ohm);
-  }
-  I_bat = Math.max(0, I_bat);
-  const V_bat = V_oc - I_bat * cfg.pack_R_Ohm;
-
-  const soc_new = Math.max(0.005, state.soc - I_bat * dt / (3600 * cfg.pack_Q_Ah));
-  const wh_em_new = state.wh_em + V_bat * I_bat * dt / 3600;
-
-  // ── ICE fuel ──────────────────────────────────────────────────────────────
+  // ── ICE-polttoaine ────────────────────────────────────────────────────────
   const fuel_new = state.fuel_g + calcIceFuelStep(P_ice_act_kW * 1000, cfg.bsfc_gkWh, dt);
 
-  // ── Boost timer (one-way latch) ───────────────────────────────────────────
+  // ── Boost-ajastin (yksisuuntainen salpa) ──────────────────────────────────
   const boost_t_new = P_em_act_kW >= cfg.P_em_cont_kW
     ? Math.min(5.0, state.boost_t + dt)
     : state.boost_t;
 
-  // ── Kinematics ────────────────────────────────────────────────────────────
+  // ── Kinematiikka ──────────────────────────────────────────────────────────
   const v_new = Math.max(0, state.v_ms + a * dt);
   const x_new = state.x_m + state.v_ms * dt + 0.5 * a * dt * dt;
-  const wh_mech_new = state.wh_mech + P_total_act_kW * dt / 3.6;  // kWh equivalent
+  const wh_mech_new = state.wh_mech + P_total_act_kW * dt / 3.6;
 
-  // ── Efficiency ────────────────────────────────────────────────────────────
-  // Chemical energy rate from fuel: BSFC gives g/kWh mech → fuel energy = mech * (bsfc * HHV_fuel)
-  // HHV gasoline ≈ 12.78 Wh/g
+  // ── Järjestelmähyötysuhde ─────────────────────────────────────────────────
+  // Polttoaineteho: P_fuel [W] = P_ice [kW] × BSFC [g/kWh] × HHV [Wh/g]
+  // Yksikköanalyysi: kW × g/kWh × Wh/g = Wh/h = W ✓
   const HHV_gasoline = 12.78;  // Wh/g
-  const P_fuel_W = (P_ice_act_kW * 1000 * cfg.bsfc_gkWh / 3600) * HHV_gasoline;
-  const P_in_total = V_bat * I_bat + P_fuel_W;
-  const eta_sys = P_in_total > 1 ? Math.min(1, (P_total_act_kW * 1000) / P_in_total) : 0;
+  const P_fuel_W = P_ice_act_kW * cfg.bsfc_gkWh * HHV_gasoline;
+  const P_in_total = batResult.V_bat * batResult.I_bat + P_fuel_W;
+  const eta_sys = P_in_total > 1
+    ? Math.min(1, (P_total_act_kW * 1000) / P_in_total)
+    : 0;
 
   const newState: HybridState = {
     t: state.t + dt,
     v_ms: v_new,
     x_m: x_new,
-    soc: soc_new,
-    wh_em: wh_em_new,
+    soc: batResult.soc_new,
+    wh_em: batResult.wh_new,
     wh_mech: wh_mech_new,
     fuel_g: fuel_new,
     boost_t: boost_t_new,
+    V_rc1: batResult.V_rc1,
+    V_rc2: batResult.V_rc2,
+    a_smooth: a_smooth_new,
   };
 
   const point: HybridPoint = {
@@ -215,10 +258,14 @@ export function hybridStep(
     T_total_Nm: T_em_act + T_ice_act,
     RPM_wheel,
     RPM_ice,
-    soc: soc_new * 100,
-    I_bat,
-    V_bat,
-    wh_em: wh_em_new,
+    N_f,
+    N_r,
+    soc: batResult.soc_new * 100,
+    I_bat: batResult.I_bat,
+    V_bat: batResult.V_bat,
+    V_rc1: batResult.V_rc1,
+    V_rc2: batResult.V_rc2,
+    wh_em: batResult.wh_new,
     fuel_g: fuel_new,
     wh_mech: wh_mech_new,
     eta_sys: eta_sys * 100,

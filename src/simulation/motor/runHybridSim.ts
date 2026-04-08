@@ -1,6 +1,6 @@
 import { hybridStep, type HybridConfig, type HybridPoint, type HybridState } from './hybridStep';
 
-export type HybridSimMode = 'acc100' | 'cruise' | 'duration';
+export type HybridSimMode = 'acc100' | 'acc75' | 'cruise' | 'duration';
 
 export interface HybridSimInput extends HybridConfig {
   mode: HybridSimMode;
@@ -11,6 +11,7 @@ export interface HybridSimInput extends HybridConfig {
 
 export interface HybridSummary {
   t100_s: number | null;       // 0–100 km/h time
+  t75m_s: number | null;       // 0–75 m time (FS acceleration event)
   peak_power_kW: number;
   peak_a_ms2: number;
   em_only_pct: number;         // % of time running on EM alone
@@ -37,35 +38,35 @@ export function runHybridSim(inp: HybridSimInput): {
     wh_mech: 0,
     fuel_g: 0,
     boost_t: 0,
+    V_rc1: 0,
+    V_rc2: 0,
+    a_smooth: 0,
   };
 
   const data: HybridPoint[] = [];
   let st = { ...state };
   let t100: number | null = null;
+  let t75m: number | null = null;
   let hybrid_steps = 0;
   let em_only_steps = 0;
   let total_steps = 0;
   let eta_sum = 0;
   let eta_n = 0;
 
-  const maxT = inp.mode === 'acc100' ? 60 : inp.duration_s;
-  // cruise target speed in m/s
+  const maxT = (inp.mode === 'acc100' || inp.mode === 'acc75') ? 60 : inp.duration_s;
   const v_cruise = inp.cruise_speed_kmh / 3.6;
 
   while (st.t < maxT && st.soc > 0.01) {
-    // Determine demanded power
     let P_demand: number | null = null;  // null = full throttle
 
     if (inp.mode === 'cruise') {
-      // Force needed to maintain cruise speed
       const v = Math.max(0.1, st.v_ms);
       const F_drag = 0.5 * 1.225 * inp.CdA_m2 * v * v;
       const F_roll = inp.Crr * inp.mass_kg * 9.81;
-      P_demand = (F_drag + F_roll) * v;  // watts
+      P_demand = (F_drag + F_roll) * v;
 
-      // Accelerate toward cruise speed if below it
       if (st.v_ms < v_cruise * 0.98) {
-        P_demand = null;  // full throttle to reach speed
+        P_demand = null;  // full throttle to reach cruise speed
       }
     }
 
@@ -80,10 +81,14 @@ export function runHybridSim(inp: HybridSimInput): {
 
     if (t100 === null && st.v_ms >= 100 / 3.6) {
       t100 = st.t;
-      if (inp.mode === 'acc100') break;
     }
 
-    // Cruise: stop if we've reached target and maintained it for duration
+    if (t75m === null && st.x_m >= 75) {
+      t75m = st.t;
+    }
+
+    if (inp.mode === 'acc100' && t100 !== null) break;
+    if (inp.mode === 'acc75' && t75m !== null) break;
     if (inp.mode === 'cruise' && st.t >= inp.duration_s) break;
   }
 
@@ -93,8 +98,8 @@ export function runHybridSim(inp: HybridSimInput): {
       t: 0, v_kmh: 0, a_ms2: 0, x_m: 0,
       P_demand_kW: 0, P_em_kW: 0, P_ice_kW: 0, P_total_kW: 0,
       T_em_Nm: 0, T_ice_Nm: 0, T_total_Nm: 0,
-      RPM_wheel: 0, RPM_ice: 0,
-      soc: inp.soc0_pct, I_bat: 0, V_bat: 0,
+      RPM_wheel: 0, RPM_ice: 0, N_f: 0, N_r: 0,
+      soc: inp.soc0_pct, I_bat: 0, V_bat: 0, V_rc1: 0, V_rc2: 0,
       wh_em: 0, fuel_g: 0, wh_mech: 0,
       eta_sys: 0, is_hybrid: false,
     });
@@ -106,6 +111,7 @@ export function runHybridSim(inp: HybridSimInput): {
 
   const summary: HybridSummary = {
     t100_s: t100,
+    t75m_s: t75m,
     peak_power_kW,
     peak_a_ms2,
     em_only_pct: total_steps > 0 ? (em_only_steps / total_steps) * 100 : 0,
