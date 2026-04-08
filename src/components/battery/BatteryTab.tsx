@@ -271,30 +271,31 @@ export function BatteryTab() {
               <LineChart
                 data={chartData}
                 series={[
-                  { key: 'eta_pos', color: '#ffca28', label: 'eta_pos', lineWidth: 1.5 },
-                  { key: 'eta_neg', color: '#66bb6a', label: 'eta_neg', lineWidth: 1.5 },
-                  { key: 'eta_tot', color: '#ffa726', label: 'eta_tot', lineWidth: 2 },
+                  { key: 'eta_pos', color: '#ffca28', label: 'η_pos', lineWidth: 1.5 },
+                  { key: 'eta_neg', color: '#66bb6a', label: 'η_neg', lineWidth: 1.5 },
+                  { key: 'eta_tot', color: '#ffa726', label: 'η_tot', lineWidth: 2 },
                 ]}
                 xKey="t"
                 height={140}
                 yUnit="mV"
+                smooth
               />
             </div>
           </div>
 
           <div>
             <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
-              Cell Temperature [C]
+              Cell Temperature [°C]
             </div>
             <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
-                  { key: 'T_C', color: '#ffa726', label: 'T cell', lineWidth: 2 },
+                  { key: 'T_C', color: '#ffa726', label: 'T_cell', lineWidth: 2 },
                 ]}
                 xKey="t"
                 height={120}
-                yUnit="C"
+                yUnit="°C"
                 hLines={[{ value: tLimit, color: 'rgba(255,152,0,0.3)' }]}
               />
             </div>
@@ -315,6 +316,12 @@ export function BatteryTab() {
                 height={130}
                 yUnit="kW"
                 yMin={0}
+                smooth
+                extraTooltipRows={pt => [{
+                  label: 'ΔP (loss)',
+                  value: `${((pt.p_oc ?? 0) - (pt.p_t ?? 0)).toFixed(3)} kW`,
+                  color: '#888',
+                }]}
               />
             </div>
           </div>
