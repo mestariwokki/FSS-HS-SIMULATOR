@@ -14,6 +14,7 @@ import { LineChart } from '../charts/LineChart';
 import { EfficiencyMap } from '../charts/EfficiencyMap';
 import { ParamGroup } from '../common/ParamGroup';
 import { exportMotorCSV } from '../../utils/csvExport';
+import { ICE_TORQUE_CURVE, interpICETorque, calcIceFuelStep } from '../../simulation/motor/iceEngine';
 
 export function MotorTab() {
   const sim = useMotorSim();
@@ -63,6 +64,14 @@ export function MotorTab() {
   const [wheelbase, setWheelbase] = useState(DEFAULT_MOTOR.wheelbase);
   const [massAcc, setMassAcc] = useState(DEFAULT_MOTOR.mass_acc);
   const [CrrAcc, setCrrAcc] = useState(DEFAULT_MOTOR.Crr_acc);
+
+  // Drivetrain type
+  const [drivetrainType, setDrivetrainType] = useState<'electric' | 'ice'>('electric');
+
+  // ICE params
+  const [iceRpm, setIceRpm] = useState(6000);
+  const [iceBsfc, setIceBsfc] = useState(300); // g/kWh
+  const [iceGear, setIceGear] = useState(3.5);  // ICE→wheel gear ratio
 
   // Sim mode
   const [mode, setMode] = useState<MotorMode>('acc75');
@@ -167,6 +176,22 @@ export function MotorTab() {
     );
   }, [pack, ecm, Kt, kV, Rw, etaEsc, etaRegen, gear, wheelD, pCont, pPeak, iCont, iPeak, nMotors, etaMotor, mCpMotor, rThMotor, mCpEsc, rThEsc, tAmb, constSpeed, vTarget, mass, CdA, Crr, mu, fFront, hCg, wheelbase, massAcc, CrrAcc, mode, soc0, t0, duration, profileSteps, regenPower, regenSpeed, sim]);
 
+  // ICE computed values at selected RPM
+  const iceTorque_Nm = interpICETorque(iceRpm);
+  const icePower_kW = iceTorque_Nm * iceRpm * 2 * Math.PI / 60 / 1000;
+  const iceFuelRate_gs = calcIceFuelStep(icePower_kW * 1000, iceBsfc, 1); // g/s at this power
+  const iceWheelTorque_Nm = iceTorque_Nm * iceGear * 0.97;
+
+  // ICE torque curve as chart data
+  const iceCurveData = useMemo(() =>
+    ICE_TORQUE_CURVE.map(([rpm, torque]) => ({
+      rpm,
+      torque_Nm: torque,
+      power_kW: torque * rpm * 2 * Math.PI / 60 / 1000,
+    })),
+    []
+  );
+
   const lastPoint = sim.data.length > 0 ? sim.data[sim.data.length - 1] : null;
 
   const addProfileStep = () => {
@@ -185,6 +210,107 @@ export function MotorTab() {
 
   return (
     <div>
+      {/* Drivetrain type selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+        <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '2px' }}>Drivetrain</span>
+        {(['electric', 'ice'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setDrivetrainType(t)}
+            style={{
+              background: drivetrainType === t ? '#ffa726' : '#222',
+              color: drivetrainType === t ? '#000' : '#ccc',
+              border: '1px solid #444',
+              padding: '5px 14px',
+              fontSize: '12px',
+              fontWeight: drivetrainType === t ? 'bold' : 'normal',
+              cursor: 'pointer',
+            }}
+          >
+            {t === 'electric' ? 'Electric BLDC' : 'ICE Engine'}
+          </button>
+        ))}
+      </div>
+
+      {/* ICE Panel */}
+      {drivetrainType === 'ice' && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+            {/* ICE Parameters */}
+            <div>
+              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+                ICE Parameters (Yamaha MT-07 690cc)
+              </div>
+              <ParamGroup label="RPM" value={iceRpm} onChange={setIceRpm} min={500} max={11000} step={250} unit="" />
+              <ParamGroup label="BSFC" value={iceBsfc} onChange={setIceBsfc} min={200} max={600} step={10} unit="g/kWh" />
+              <ParamGroup label="Gear ratio" value={iceGear} onChange={setIceGear} min={1} max={10} step={0.1} unit="" />
+            </div>
+
+            {/* ICE Computed Values */}
+            <div>
+              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+                Operating Point @ {iceRpm} RPM
+              </div>
+              <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 2.0 }}>
+                Torque = <span style={{ color: '#ffa726' }}>{iceTorque_Nm.toFixed(1)}</span> Nm<br />
+                Power = <span style={{ color: '#66bb6a' }}>{icePower_kW.toFixed(2)}</span> kW
+                <span style={{ color: '#888' }}> ({(icePower_kW * 1.341).toFixed(1)} hp)</span><br />
+                Wheel torque = <span style={{ color: '#4fc3f7' }}>{iceWheelTorque_Nm.toFixed(1)}</span> Nm (×{iceGear} gear)<br />
+                Fuel rate = <span style={{ color: '#ef5350' }}>{iceFuelRate_gs.toFixed(3)}</span> g/s
+                <span style={{ color: '#888' }}> ({(iceFuelRate_gs * 3.6).toFixed(2)} kg/h)</span><br />
+                Fuel per 10s = <span style={{ color: '#ef5350' }}>{(iceFuelRate_gs * 10).toFixed(1)}</span> g
+              </div>
+            </div>
+
+            {/* ICE Max Power Info */}
+            <div>
+              <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+                Engine Limits
+              </div>
+              <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 2.0 }}>
+                Peak torque = <span style={{ color: '#ffa726' }}>{Math.max(...ICE_TORQUE_CURVE.map(c => c[1])).toFixed(1)}</span> Nm @ ~6000 RPM<br />
+                Peak power ≈ <span style={{ color: '#66bb6a' }}>{Math.max(...iceCurveData.map(d => d.power_kW)).toFixed(1)}</span> kW<br />
+                Redline = <span style={{ color: '#ef5350' }}>{ICE_TORQUE_CURVE[ICE_TORQUE_CURVE.length - 1][0]}</span> RPM<br />
+                Displacement = <span style={{ color: '#888' }}>689 cc</span><br />
+                Type = <span style={{ color: '#888' }}>Inline 2 (MT-07)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ICE Torque + Power curves */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+            <div>
+              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Torque Curve (Nm)</div>
+              <LineChart
+                data={iceCurveData}
+                series={[{ key: 'torque_Nm', color: '#ffa726', label: 'Torque' }]}
+                xKey="rpm"
+                height={180}
+                yUnit=" Nm"
+                xUnit=" rpm"
+                hLines={[{ value: iceTorque_Nm, color: 'rgba(255,167,38,0.4)' }]}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Power Curve (kW)</div>
+              <LineChart
+                data={iceCurveData}
+                series={[{ key: 'power_kW', color: '#66bb6a', label: 'Power' }]}
+                xKey="rpm"
+                height={180}
+                yUnit=" kW"
+                xUnit=" rpm"
+                hLines={[{ value: icePower_kW, color: 'rgba(102,187,106,0.4)' }]}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Electric drivetrain UI (hidden when ICE selected) */}
+      {drivetrainType === 'electric' && <>
+
       {/* Config panels */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '20px' }}>
         {/* Column 1: Pack config */}
@@ -484,6 +610,8 @@ export function MotorTab() {
 
       {/* Summary */}
       <MotorSummaryTable data={sim.data} stats={sim.simStats} />
+
+      </> /* end electric drivetrain */}
     </div>
   );
 }

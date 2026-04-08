@@ -101,10 +101,10 @@ export function motorStep(
     V_t = V_oc - I_bat * R_pack;
     P_bat_W = I_bat * V_t;
 
+    // One-way latch: boost_t only increases. Once 5s of peak current is used,
+    // I_limit permanently drops to I_cont for this run (no oscillation).
     if (I_motor_per >= mc.I_cont) {
       boost_t = Math.min(5.0, boost_t + dt);
-    } else {
-      boost_t = Math.max(0, boost_t - dt * 2);
     }
   }
 
