@@ -20,6 +20,8 @@ export function ChartTooltip({ visible, x, y, title, rows }: ChartTooltipProps) 
   let ly = y - 60;
   if (lx + 200 > window.innerWidth - 8) lx = x - 210;
   if (ly < 8) ly = 8;
+  const estH = 40 + rows.length * 20;
+  if (ly + estH > window.innerHeight - 8) ly = y - estH - 10;
 
   return (
     <div style={{

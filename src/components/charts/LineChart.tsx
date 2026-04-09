@@ -277,11 +277,19 @@ export function LineChart({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       />
-      {hoveredPoint && tooltipRows.length > 0 && (
+      {hoveredPoint && tooltipRows.length > 0 && (() => {
+        const TW = 180, TH = 90, OFF = 14;
+        const tx = tooltipPos.x + TW + OFF > window.innerWidth - 8
+          ? tooltipPos.x - TW - OFF
+          : tooltipPos.x + OFF;
+        const ty = tooltipPos.y - 10 + TH > window.innerHeight - 8
+          ? tooltipPos.y - TH - OFF
+          : tooltipPos.y - 10;
+        return (
         <div style={{
           position: 'fixed',
-          left: tooltipPos.x + 14,
-          top: tooltipPos.y - 10,
+          left: tx,
+          top: ty,
           background: 'rgba(18,18,24,0.96)',
           border: '1px solid #333',
           borderRadius: '4px',
@@ -299,7 +307,8 @@ export function LineChart({
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
