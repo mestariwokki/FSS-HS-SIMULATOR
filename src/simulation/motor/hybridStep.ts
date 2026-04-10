@@ -30,6 +30,7 @@ export interface HybridConfig {
   T_em_peak_Nm: number;   // max pyörävääntö EM:ltä (matalilla nopeuksilla)
   eta_em: number;         // ESC + käämitys hyötysuhde (sähkö→mekaniikka)
   eta_regen: number;
+  em_gear: number;        // EM sisäinen planeettavaihde (moottoriakseli → pyörä)
 
   // ICE (takaakseli)
   ice_gear: number;       // ICE-akseli → pyörä välityssuhde (sis. loppuvälityksen)
@@ -69,6 +70,10 @@ export interface HybridState {
   V_rc1: number;
   V_rc2: number;
   a_smooth: number;   // suodatettu kiihtyvyys painonsiirtoa varten [m/s²]
+  // Thermal state
+  T_bldc_C: number;   // BLDC moottorin lämpötila (symmetrinen molemmille)
+  T_esc_C: number;    // ESC lämpötila (symmetrinen)
+  T_ice_C: number;    // ICE jäähdytysnesteen lämpötila
 }
 
 // ── Output point ──────────────────────────────────────────────────────────
@@ -99,6 +104,25 @@ export interface HybridPoint {
   wh_mech: number;
   eta_sys: number;
   is_hybrid: boolean;
+  // BLDC1/BLDC2 erittely (symmetrinen kuorma → I_BLDC1 = I_BLDC2)
+  I_BLDC1: number;
+  I_BLDC2: number;
+  P_BLDC1_kW: number;      // mekaaninen antoteho per moottori [kW]
+  P_BLDC2_kW: number;
+  P_elec_BLDC_kW: number; // sähköinen ottoteho per moottori [kW]
+  T_BLDC1: number;    // BLDC lämpötila °C
+  T_BLDC2: number;
+  T_ESC1: number;     // ESC lämpötila °C
+  T_ESC2: number;
+  eta_BLDC1: number;
+  eta_BLDC2: number;
+  // ICE lämpötila & hyötysuhde
+  T_ice_C: number;
+  eta_ice: number;
+  // Hyötysuhdekartan käyttöpisteet
+  RPM_bldc: number;       // BLDC akselin kierrosluku (RPM_wheel × vaihde)
+  T_motor_Nm: number;     // BLDC akselin vääntö per moottori [Nm]
+  T_ice_shaft_Nm: number; // ICE kampiakselin vääntö [Nm]
 }
 
 // ── Step function ─────────────────────────────────────────────────────────
@@ -231,6 +255,40 @@ export function hybridStep(
     ? Math.min(1, (P_total_act_kW * 1000) / P_in_total)
     : 0;
 
+  // ── BLDC erittely & lämpömallit ───────────────────────────────────────────
+  // Symmetrinen kuorma: BLDC1 = BLDC2 = puolet kokonaistehosta
+  const P_bat_per_bldc = P_bat_W / 2;
+  const I_per_bldc = batResult.I_bat / 2;
+  const eta_bldc = cfg.eta_em;
+
+  // BLDC lämpömalli (R_th=0.08 K/W, mCp=600 J/K → T_eq≈92°C @ P_loss=840W)
+  const R_TH_BLDC = 0.08, MCp_BLDC = 600;
+  const P_loss_bldc = Math.max(0, P_bat_per_bldc * (1 - cfg.eta_em));
+  const T_bldc_new = Math.max(25,
+    state.T_bldc_C + (P_loss_bldc - (state.T_bldc_C - 25) / R_TH_BLDC) / MCp_BLDC * dt,
+  );
+
+  // ESC lämpömalli (R_th=0.15 K/W, mCp=200 J/K, ~2% häviö)
+  const R_TH_ESC = 0.15, MCp_ESC = 200;
+  const P_loss_esc = P_bat_per_bldc * 0.02;
+  const T_esc_new = Math.max(25,
+    state.T_esc_C + (P_loss_esc - (state.T_esc_C - 25) / R_TH_ESC) / MCp_ESC * dt,
+  );
+
+  // ICE lämpömalli (R_th=4.5e-4 K/W, mCp=6000 J/K → 80→100°C @ täysi kuorma)
+  const T_ICE_BASE = 80;
+  const R_TH_ICE = 4.5e-4, MCp_ICE = 6000;
+  const eta_ice = Math.min(0.45, 1000 / (cfg.bsfc_gkWh * HHV_gasoline));
+  const P_loss_ice_W = P_ice_act_kW * 1000 * (1 - eta_ice);
+  const T_ice_new = Math.max(T_ICE_BASE,
+    state.T_ice_C + (P_loss_ice_W - (state.T_ice_C - T_ICE_BASE) / R_TH_ICE) / MCp_ICE * dt,
+  );
+
+  // Hyötysuhdekartan käyttöpisteet
+  const RPM_bldc = RPM_wheel * cfg.em_gear;
+  const T_motor_Nm = T_em_act > 0 ? (T_em_act / 2) / cfg.em_gear : 0;
+  const T_ice_shaft_Nm = T_ice_act > 0 ? T_ice_act / (cfg.ice_gear * 0.97) : 0;
+
   const newState: HybridState = {
     t: state.t + dt,
     v_ms: v_new,
@@ -243,6 +301,9 @@ export function hybridStep(
     V_rc1: batResult.V_rc1,
     V_rc2: batResult.V_rc2,
     a_smooth: a_smooth_new,
+    T_bldc_C: T_bldc_new,
+    T_esc_C: T_esc_new,
+    T_ice_C: T_ice_new,
   };
 
   const point: HybridPoint = {
@@ -271,6 +332,17 @@ export function hybridStep(
     wh_mech: wh_mech_new,
     eta_sys: eta_sys * 100,
     is_hybrid: P_ice_act_kW > 0.1,
+    // BLDC erittely
+    I_BLDC1: I_per_bldc, I_BLDC2: I_per_bldc,
+    P_BLDC1_kW: P_em_act_kW / 2, P_BLDC2_kW: P_em_act_kW / 2,
+    P_elec_BLDC_kW: P_bat_per_bldc / 1000,
+    T_BLDC1: T_bldc_new, T_BLDC2: T_bldc_new,
+    T_ESC1: T_esc_new, T_ESC2: T_esc_new,
+    eta_BLDC1: eta_bldc, eta_BLDC2: eta_bldc,
+    // ICE
+    T_ice_C: T_ice_new, eta_ice,
+    // Käyttöpisteet
+    RPM_bldc, T_motor_Nm, T_ice_shaft_Nm,
   };
 
   return { state: newState, point };

@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { runHybridSim, type HybridSimMode, type HybridSummary } from '../../simulation/motor/runHybridSim';
 import type { HybridPoint } from '../../simulation/motor/hybridStep';
 import { LineChart } from '../charts/LineChart';
+import { HybridBldcMap } from '../charts/HybridBldcMap';
+import { HybridIceMap } from '../charts/HybridIceMap';
 import { ParamGroup } from '../common/ParamGroup';
 import { ICE_TORQUE_CURVE } from '../../simulation/motor/iceEngine';
 
@@ -65,7 +67,8 @@ export function HybridTab() {
   // T_peak/pyörä = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 7 kW | P_cont = 2 × 3.5 kW
   const [P_em_peak, setP_em_peak] = useState(14.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
-  const [T_em_peak, setT_em_peak] = useState(45);     // Nm at wheel (2 × 7.5 Nm × gear 3:1)
+  const T_em_peak = 45;   // Nm at wheel — kiinteä arvo (2 × 7.5 Nm × vaihde 3:1)
+  const [em_gear, setEmGear] = useState(3.0);  // planeettavaihde (moottori → pyörä)
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
 
@@ -84,8 +87,8 @@ export function HybridTab() {
   const [soc0, setSoc0] = useState(100);
 
   // ── Vehicle — M06H lähtötiedot (Ajotilapiirros_Drive_diagram_FSOM06H_2026.xlsx) ──
-  const [mass, setMass] = useState(285);       // kg, sis. kuljettaja (210+75)
-  const [wheel_r, setWheelR] = useState(0.199); // m, dynaaminen vierintäsäde 16x7.5-10
+  const [mass, setMass] = useState(285);          // kg, sis. kuljettaja (210+75)
+  const [wheel_d_mm, setWheelD] = useState(398);  // mm, dynaaminen vierintähalkaisija 16x7.5-10
   const [CdA, setCdA] = useState(0.98);         // m², A=1.225 × cA=0.80
   const [Crr, setCrr] = useState(0.018);        // vierintävastuskerroin
   const [mu, setMu] = useState(1.60);           // kitka (slick, kuiva)
@@ -117,6 +120,7 @@ export function HybridTab() {
       P_em_peak_kW: P_em_peak,
       P_em_cont_kW: P_em_cont,
       T_em_peak_Nm: T_em_peak,
+      em_gear,
       eta_em,
       eta_regen,
       ice_gear,
@@ -128,7 +132,7 @@ export function HybridTab() {
       pack_Q_Ah,
       pack_T_celsius,
       mass_kg: mass,
-      wheel_r_m: wheel_r,
+      wheel_r_m: wheel_d_mm / 2000,
       CdA_m2: CdA,
       Crr,
       mu,
@@ -144,10 +148,10 @@ export function HybridTab() {
     setSummary(result.summary);
     setRunMs(Math.round(performance.now() - t0));
   }, [
-    P_em_peak, P_em_cont, T_em_peak, eta_em, eta_regen,
+    P_em_peak, P_em_cont, T_em_peak, em_gear, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
     pack_series, pack_parallel, pack_Q_Ah, pack_T_celsius, soc0,
-    mass, wheel_r, CdA, Crr, mu, h_cg, wheelbase, f_front,
+    mass, wheel_d_mm, CdA, Crr, mu, h_cg, wheelbase, f_front,
     mode, duration, cruise_spd,
   ]);
 
@@ -155,6 +159,14 @@ export function HybridTab() {
     const id = setTimeout(runSim, 450);
     return () => clearTimeout(id);
   }, [runSim]);
+
+  // Käyttöpiste hyötysuhdekartoille: suurimman EM-tehon hetki
+  const maxPt = useMemo(() =>
+    data.length > 0
+      ? data.reduce((best, pt) => pt.P_em_kW > best.P_em_kW ? pt : best, data[0])
+      : null,
+    [data],
+  );
 
   const d = data as unknown as Record<string, number>[];
 
@@ -213,7 +225,8 @@ export function HybridTab() {
             <SHead>Teho & vääntö</SHead>
             <ParamGroup label="P_peak" value={P_em_peak} onChange={setP_em_peak} min={0.5} max={50} step={0.5} unit="kW" infoTerm="P_peak" />
             <ParamGroup label="P_cont" value={P_em_cont} onChange={setP_em_cont} min={0.5} max={40} step={0.5} unit="kW" infoTerm="P_cont" />
-            <ParamGroup label="T_peak wheel" value={T_em_peak} onChange={setT_em_peak} min={50} max={2000} step={10} unit="Nm" />
+            <SHead>Voimansiirto</SHead>
+            <ParamGroup label="Välityssuhde" value={em_gear} onChange={setEmGear} min={1.0} max={10.0} step={0.1} unit=":1" infoTerm="gear_ratio" />
             <SHead>Hyötysuhde</SHead>
             <ParamGroup label="η EM+ESC" value={eta_em} onChange={setEtaEm} min={0.7} max={0.99} step={0.01} unit="" infoTerm="eta_motor" />
             <ParamGroup label="η regen" value={eta_regen} onChange={setEtaRegen} min={0.5} max={0.95} step={0.01} unit="" infoTerm="eta_regen" />
@@ -249,7 +262,7 @@ export function HybridTab() {
               Ajoneuvo
             </div>
             <ParamGroup label="Massa" value={mass} onChange={setMass} min={100} max={700} step={5} unit="kg" />
-            <ParamGroup label="Pyörän säde" value={wheel_r} onChange={setWheelR} min={0.10} max={0.40} step={0.005} unit="m" />
+            <ParamGroup label="Pyörän halkaisija" value={wheel_d_mm} onChange={setWheelD} min={200} max={800} step={5} unit="mm" />
             <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={2.0} step={0.01} unit="m²" infoTerm="CdA" />
             <ParamGroup label="Crr" value={Crr} onChange={setCrr} min={0.005} max={0.05} step={0.001} unit="" infoTerm="Crr" />
             <ParamGroup label="μ (kitka)" value={mu} onChange={setMu} min={0.5} max={2.5} step={0.05} unit="" infoTerm="mu" />
@@ -380,6 +393,39 @@ export function HybridTab() {
             </div>
           )}
 
+          {/* ── Hyötysuhdekartat ────────────────────────────────────── */}
+          <div style={{ marginBottom: '16px' }}>
+            <ChartLabel>Hyötysuhdekartat — ● huipputehon käyttöpiste</ChartLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div>
+                <div style={{ fontSize: '9px', color: '#4fc3f7', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>BLDC1 — Etuvasen</div>
+                <HybridBldcMap
+                  label="BLDC1"
+                  labelColor="#4fc3f7"
+                  opRpm={maxPt?.RPM_bldc}
+                  opTorque={maxPt?.T_motor_Nm}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '9px', color: '#81d4fa', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>BLDC2 — Etuoikea</div>
+                <HybridBldcMap
+                  label="BLDC2"
+                  labelColor="#81d4fa"
+                  opRpm={maxPt?.RPM_bldc}
+                  opTorque={maxPt?.T_motor_Nm}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '9px', color: '#ffa726', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>ICE — MT-07 690cc</div>
+                <HybridIceMap
+                  bsfc_gkWh={bsfc}
+                  opRpm={maxPt?.RPM_ice}
+                  opTorque={maxPt?.T_ice_shaft_Nm}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Toggle: show components */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <span style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -407,7 +453,8 @@ export function HybridTab() {
               series={[
                 { key: 'P_total_kW', color: '#ffffff', label: 'P_total', lineWidth: 2.5 },
                 ...(showComponents ? [
-                  { key: 'P_em_kW', color: '#4fc3f7', label: 'P_em', lineWidth: 1.5 },
+                  { key: 'P_BLDC1_kW', color: '#4fc3f7', label: 'BLDC1', lineWidth: 1.5 },
+                  { key: 'P_BLDC2_kW', color: '#81d4fa', label: 'BLDC2', lineWidth: 1.5, dashed: true },
                   { key: 'P_ice_kW', color: '#ffa726', label: 'P_ice', lineWidth: 1.5 },
                   { key: 'P_demand_kW', color: '#333', label: 'P_tarve', lineWidth: 1, dashed: true },
                 ] : [
@@ -419,6 +466,12 @@ export function HybridTab() {
               height={200}
               yUnit=" kW"
               yMin={0}
+              extraTooltipRows={(pt) => [
+                { label: 'BLDC1', value: `${(pt.I_BLDC1 ?? 0).toFixed(0)}A | ${(pt.T_BLDC1 ?? 25).toFixed(0)}°C`, color: '#4fc3f7' },
+                { label: 'BLDC2', value: `${(pt.I_BLDC2 ?? 0).toFixed(0)}A | ${(pt.T_BLDC2 ?? 25).toFixed(0)}°C`, color: '#81d4fa' },
+                { label: 'ESC1/2', value: `${(pt.T_ESC1 ?? 25).toFixed(0)}/${(pt.T_ESC2 ?? 25).toFixed(0)}°C`, color: '#ef5350' },
+                { label: 'ICE', value: `${(pt.P_ice_kW ?? 0).toFixed(1)}kW @ ${(pt.RPM_ice ?? 0).toFixed(0)}rpm | η${((pt.eta_ice ?? 0) * 100).toFixed(0)}%`, color: '#ffa726' },
+              ]}
             />
           </div>
 
@@ -543,10 +596,14 @@ export function HybridTab() {
           {showComponents && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <ChartLabel>Akkuvirta (A)</ChartLabel>
+                <ChartLabel>Virta (A)</ChartLabel>
                 <LineChart
                   data={d}
-                  series={[{ key: 'I_bat', color: '#ef5350', label: 'I_bat' }]}
+                  series={[
+                    { key: 'I_bat',   color: '#ef5350', label: 'I_bat', lineWidth: 2 },
+                    { key: 'I_BLDC1', color: '#4fc3f7', label: 'I_BLDC1', lineWidth: 1.5, dashed: true },
+                    { key: 'I_BLDC2', color: '#81d4fa', label: 'I_BLDC2', lineWidth: 1, dashed: true },
+                  ]}
                   xKey="t"
                   height={150}
                   yUnit=" A"
@@ -567,6 +624,45 @@ export function HybridTab() {
                   yUnit=" V"
                 />
               </div>
+            </div>
+          )}
+
+          {/* ── Chart 8: Motor I / P_elec / P_mech vs speed ──────────── */}
+          {showComponents && (
+            <div style={{ marginBottom: '16px' }}>
+              <ChartLabel>BLDC — Virta & teho vs nopeus</ChartLabel>
+              <LineChart
+                data={d}
+                series={[
+                  { key: 'I_BLDC1',        color: '#4fc3f7', label: 'I (A)',       lineWidth: 2 },
+                  { key: 'P_elec_BLDC_kW', color: '#ef5350', label: 'P_otto (kW)', lineWidth: 2 },
+                  { key: 'P_BLDC1_kW',     color: '#66bb6a', label: 'P_anto (kW)', lineWidth: 2 },
+                ]}
+                xKey="v_kmh"
+                xUnit=" km/h"
+                height={200}
+                yMin={0}
+              />
+            </div>
+          )}
+
+          {/* ── Chart 9: Component temperatures ─────────────────────────── */}
+          {showComponents && (
+            <div style={{ marginBottom: '16px' }}>
+              <ChartLabel>Komponenttilämpötilat (°C)</ChartLabel>
+              <LineChart
+                data={d}
+                series={[
+                  { key: 'T_BLDC1', color: '#4fc3f7', label: 'BLDC1', lineWidth: 2 },
+                  { key: 'T_BLDC2', color: '#81d4fa', label: 'BLDC2', lineWidth: 1.5, dashed: true },
+                  { key: 'T_ESC1',  color: '#ef5350', label: 'ESC1',  lineWidth: 1.5 },
+                  { key: 'T_ESC2',  color: '#ff8a80', label: 'ESC2',  lineWidth: 1, dashed: true },
+                  { key: 'T_ice_C', color: '#ffa726', label: 'ICE',   lineWidth: 2 },
+                ]}
+                xKey="t"
+                height={180}
+                yUnit=" °C"
+              />
             </div>
           )}
 

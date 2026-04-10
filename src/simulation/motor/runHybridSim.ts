@@ -41,6 +41,9 @@ export function runHybridSim(inp: HybridSimInput): {
     V_rc1: 0,
     V_rc2: 0,
     a_smooth: 0,
+    T_bldc_C: 25,
+    T_esc_C: 25,
+    T_ice_C: 80,  // lämmin moottori (idle-lämpötila)
   };
 
   const data: HybridPoint[] = [];
@@ -110,6 +113,11 @@ export function runHybridSim(inp: HybridSimInput): {
       soc: inp.soc0_pct, I_bat: 0, V_bat: 0, V_rc1: 0, V_rc2: 0,
       wh_em: 0, fuel_g: 0, wh_mech: 0,
       eta_sys: 0, is_hybrid: false,
+      I_BLDC1: 0, I_BLDC2: 0, P_BLDC1_kW: 0, P_BLDC2_kW: 0, P_elec_BLDC_kW: 0,
+      T_BLDC1: 25, T_BLDC2: 25, T_ESC1: 25, T_ESC2: 25,
+      eta_BLDC1: 0, eta_BLDC2: 0,
+      T_ice_C: 80, eta_ice: 0,
+      RPM_bldc: 0, T_motor_Nm: 0, T_ice_shaft_Nm: 0,
     });
   }
 
