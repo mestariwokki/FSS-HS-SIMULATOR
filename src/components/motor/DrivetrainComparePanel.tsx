@@ -45,11 +45,11 @@ function DerivedRow({ label, value, unit, color = '#ddd', term }: {
 }) {
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline', marginBottom: '5px', fontSize: '12px' }}>
-      <span style={{ color: '#888', minWidth: '120px', whiteSpace: 'nowrap' }}>
+      <span style={{ color: '#aaa', minWidth: '120px', whiteSpace: 'nowrap' }}>
         {term ? <InfoTooltip term={term} label={label} /> : label}
       </span>
       <span style={{ color, fontWeight: 'bold' }}>{value}</span>
-      <span style={{ color: '#666', fontSize: '11px' }}>{unit}</span>
+      <span style={{ color: '#aaa', fontSize: '11px' }}>{unit}</span>
     </div>
   );
 }
@@ -67,12 +67,12 @@ function StatCard({ label, value, unit, color = '#ddd' }: {
       textAlign: 'center',
       minWidth: '110px',
     }}>
-      <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+      <div style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
         {label}
       </div>
       <div style={{ fontSize: '20px', fontWeight: 'bold', color }}>
         {value}
-        <span style={{ fontSize: '11px', color: '#666', marginLeft: '3px' }}>{unit}</span>
+        <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '3px' }}>{unit}</span>
       </div>
     </div>
   );
@@ -97,42 +97,53 @@ interface BldcProps {
   mCpEsc: number; setMCpEsc: (v: number) => void;
   rThEsc: number; setRThEsc: (v: number) => void;
   tAmb: number; setTAmb: (v: number) => void;
+  vBatNom?: number;
 }
 
 function BldcColumn(p: BldcProps) {
   const Kt = kVtoKt(p.kV);
+  const vBat = p.vBatNom ?? 0;
+  const rpmMax = p.kV * vBat;
+  const wheelR_m = p.wheelD / 2000;
+  const vMax_kmh = rpmMax > 0
+    ? (rpmMax / p.gear / 60) * (2 * Math.PI * wheelR_m) * 3.6
+    : 0;
+  const tWheelMax_Nm = Kt * p.iPeak * p.gear * 0.97 * p.nMotors;
+
   return (
     <div>
       <ColumnHead color="#4fc3f7">Electric Motor (BLDC)</ColumnHead>
 
-      <SectionHead>Base parameters</SectionHead>
+      {/* ── Block 1: Motor ──────────────────────────────────────────────── */}
+      <SectionHead>Motor</SectionHead>
       <ParamGroup label="kV" value={p.kV} onChange={p.setKV} min={10} max={2000} step={1} unit="RPM/V" infoTerm="kV" />
-      <ParamGroup label="R_winding" value={p.Rw} onChange={p.setRw} min={0.001} max={2} step={0.01} unit="Ω" />
-      <ParamGroup label="Gear ratio" value={p.gear} onChange={p.setGear} min={1} max={20} step={0.1} unit=":1" infoTerm="gear_ratio" />
-      <ParamGroup label="Wheel dia" value={p.wheelD} onChange={p.setWheelD} min={200} max={700} step={10} unit="mm" />
+      <ParamGroup label="R_phase" value={p.Rw} onChange={p.setRw} min={0.001} max={2} step={0.001} unit="Ω" />
       <ParamGroup label="n_motors" value={p.nMotors} onChange={p.setNMotors} min={1} max={4} step={1} unit="" />
+      <DerivedRow label="Kt" value={Kt.toFixed(4)} unit="Nm/A" color="#4fc3f7" term="Kt" />
 
-      <SectionHead>Power &amp; current</SectionHead>
-      <ParamGroup label="P_cont" value={p.pCont} onChange={p.setPCont} min={0.5} max={50} step={0.5} unit="kW" infoTerm="P_cont" />
-      <ParamGroup label="P_peak" value={p.pPeak} onChange={p.setPPeak} min={0.5} max={50} step={0.5} unit="kW" infoTerm="P_peak" />
+      {/* ── Block 2: ESC / Usage ────────────────────────────────────────── */}
+      <SectionHead>ESC / Usage</SectionHead>
       <ParamGroup label="I_cont" value={p.iCont} onChange={p.setICont} min={10} max={500} step={1} unit="A" infoTerm="I_cont" />
       <ParamGroup label="I_peak" value={p.iPeak} onChange={p.setIPeak} min={10} max={500} step={1} unit="A" infoTerm="I_peak" />
-
-      <SectionHead>Efficiency</SectionHead>
       <ParamGroup label="η_ESC" value={p.etaEsc} onChange={p.setEtaEsc} min={0.8} max={1.0} step={0.01} unit="" infoTerm="eta_ESC" />
-      <ParamGroup label="η_regen" value={p.etaRegen} onChange={p.setEtaRegen} min={0.5} max={1.0} step={0.01} unit="" infoTerm="eta_regen" />
-      <ParamGroup label="η_motor" value={p.etaMotor} onChange={p.setEtaMotor} min={0.7} max={1.0} step={0.01} unit="" infoTerm="eta_motor" />
+      {vBat > 0 && (
+        <DerivedRow label="V_pack" value={vBat.toFixed(1)} unit="V" color="#ffca28" />
+      )}
 
-      <SectionHead>Thermal model</SectionHead>
-      <ParamGroup label="mCp motor" value={p.mCpMotor} onChange={p.setMCpMotor} min={50} max={5000} step={50} unit="J/K" />
-      <ParamGroup label="R_th motor" value={p.rThMotor} onChange={p.setRThMotor} min={0.1} max={5} step={0.1} unit="K/W" />
-      <ParamGroup label="mCp ESC" value={p.mCpEsc} onChange={p.setMCpEsc} min={50} max={2000} step={50} unit="J/K" />
-      <ParamGroup label="R_th ESC" value={p.rThEsc} onChange={p.setRThEsc} min={0.1} max={5} step={0.1} unit="K/W" />
-      <ParamGroup label="T_ambient" value={p.tAmb} onChange={p.setTAmb} min={-10} max={50} step={1} unit="°C" />
+      {/* ── Block 3: Gearbox & Wheel ─────────────────────────────────────── */}
+      <SectionHead>Gearbox &amp; Wheel</SectionHead>
+      <ParamGroup label="Gear ratio" value={p.gear} onChange={p.setGear} min={1} max={20} step={0.1} unit=":1" infoTerm="gear_ratio" />
+      <ParamGroup label="Wheel dia" value={p.wheelD} onChange={p.setWheelD} min={200} max={700} step={10} unit="mm" />
 
+      {/* ── Derived values ───────────────────────────────────────────────── */}
       <SectionHead>Derived values</SectionHead>
-      <DerivedRow label="Kt" value={Kt.toFixed(4)} unit="Nm/A" color="#4fc3f7" term="Kt" />
-      <DerivedRow label="T_motor @ I_peak" value={(Kt * p.iPeak).toFixed(2)} unit="Nm" color="#66bb6a" />
+      {vBat > 0 && (
+        <DerivedRow label="Max RPM" value={rpmMax.toFixed(0)} unit="RPM" color="#4fc3f7" />
+      )}
+      {vBat > 0 && (
+        <DerivedRow label="Max speed" value={vMax_kmh.toFixed(1)} unit="km/h" color="#66bb6a" />
+      )}
+      <DerivedRow label="Max wheel torque" value={tWheelMax_Nm.toFixed(1)} unit="Nm" color="#ffa726" />
       <DerivedRow label="P_total peak" value={(p.pPeak * p.nMotors).toFixed(1)} unit="kW" color="#ffa726" />
       <DerivedRow label="P_total cont" value={(p.pCont * p.nMotors).toFixed(1)} unit="kW" color="#ffca28" />
     </div>
@@ -163,9 +174,9 @@ function IceColumn(p: IceProps) {
       <ParamGroup label="Gear ratio" value={p.iceGear} onChange={p.setIceGear} min={1} max={10} step={0.1} unit=":1" infoTerm="gear_ratio" />
 
       <SectionHead>Engine specs (fixed)</SectionHead>
-      <DerivedRow label="Displacement" value="689" unit="cc" color="#888" />
-      <DerivedRow label="Cylinders" value="2" unit="(parallel)" color="#888" />
-      <DerivedRow label="Max RPM" value={`${ICE_TORQUE_CURVE[ICE_TORQUE_CURVE.length - 1][0]}`} unit="RPM" color="#888" />
+      <DerivedRow label="Displacement" value="689" unit="cc" color="#aaa" />
+      <DerivedRow label="Cylinders" value="2" unit="(parallel)" color="#aaa" />
+      <DerivedRow label="Max RPM" value={`${ICE_TORQUE_CURVE[ICE_TORQUE_CURVE.length - 1][0]}`} unit="RPM" color="#aaa" />
       <DerivedRow label="Peak torque" value={peakTorque.toFixed(1)} unit="Nm (≈6 000 RPM)" color="#ffa726" />
       <DerivedRow label="Peak power" value={peakPower.toFixed(1)} unit="kW" color="#66bb6a" />
 
@@ -225,6 +236,7 @@ function HybridSummary(p: HybridSummaryProps) {
 // ── Exported panel ────────────────────────────────────────────────────────
 export interface DrivetrainComparePanelProps extends BldcProps, IceProps {
   mass: number;
+  vBatNom?: number;
 }
 
 export function DrivetrainComparePanel(props: DrivetrainComparePanelProps) {
@@ -246,6 +258,7 @@ export function DrivetrainComparePanel(props: DrivetrainComparePanelProps) {
     mCpEsc: props.mCpEsc, setMCpEsc: props.setMCpEsc,
     rThEsc: props.rThEsc, setRThEsc: props.setRThEsc,
     tAmb: props.tAmb, setTAmb: props.setTAmb,
+    vBatNom: props.vBatNom,
   };
 
   const iceProps: IceProps = {

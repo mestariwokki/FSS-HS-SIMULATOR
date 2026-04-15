@@ -204,6 +204,7 @@ export function MotorTab() {
           iceBsfc={iceBsfc} setIceBsfc={setIceBsfc}
           iceGear={iceGear} setIceGear={setIceGear}
           mass={mass}
+          vBatNom={vNom * series}
         />
       </div>
 
@@ -348,34 +349,61 @@ export function MotorTab() {
         </div>
       </div>
 
-      {/* ── Control buttons ───────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '14px' }}>
-        <button
-          onClick={handleStart}
-          disabled={sim.running}
-          style={{
-            background: '#66bb6a', color: '#000', border: 'none',
-            padding: '8px 20px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
-            opacity: sim.running ? 0.4 : 1,
-          }}
-        >
-          {mode === 'acc75' ? 'Run 75m' : 'Start'}
-        </button>
-        <button
-          onClick={sim.reset}
-          style={{ background: '#333', color: '#fff', border: '1px solid #444', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
-        >
-          Reset
-        </button>
-        {sim.data.length > 0 && (
+      {/* ── Run / Reset bar ───────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: '#0f0f14', border: '1px solid #2d2d38',
+        padding: '10px 14px', marginBottom: '14px',
+      }}>
+        {!sim.running ? (
           <button
-            onClick={() => exportMotorCSV(sim.data)}
-            style={{ background: '#222', color: '#4fc3f7', border: '1px solid #444', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
+            id="btn-motor-run"
+            onClick={handleStart}
+            style={{
+              background: '#1a1a1a', color: '#4caf50', border: '1px solid #4caf50',
+              padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+            }}
           >
-            Export CSV
+            ▶ {mode === 'acc75' ? 'RUN 75M' : 'START'}
+          </button>
+        ) : (
+          <button
+            id="btn-motor-pause"
+            onClick={sim.pause}
+            style={{
+              background: '#1a1a1a', color: '#ffca28', border: '1px solid #ffca28',
+              padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+            }}
+          >
+            {sim.paused ? '▶ RESUME' : '⏸ PAUSE'}
           </button>
         )}
-        <span style={{ fontSize: '12px', color: '#888', marginLeft: '8px' }}>{sim.status}</span>
+        <button
+          id="btn-motor-reset"
+          onClick={sim.reset}
+          style={{
+            background: '#1a1a1a', color: '#ddd', border: '1px solid #555',
+            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+          }}
+        >
+          ↺ RESET
+        </button>
+        <button
+          id="btn-motor-csv"
+          onClick={() => exportMotorCSV(sim.data)}
+          disabled={sim.data.length === 0}
+          style={{
+            background: '#1a1a1a', color: '#4db6ac', border: '1px solid #4db6ac',
+            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px',
+            cursor: sim.data.length === 0 ? 'default' : 'pointer',
+            marginLeft: '8px', opacity: sim.data.length === 0 ? 0.4 : 1,
+          }}
+        >
+          ↓ SAVE CSV
+        </button>
+        <span id="motor-status" style={{ color: '#ccc', fontSize: '12px', marginLeft: '8px' }}>
+          {sim.status}
+        </span>
       </div>
 
       {/* ── 75m result ────────────────────────────────────────────────────── */}
