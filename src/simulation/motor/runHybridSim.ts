@@ -43,7 +43,7 @@ export function runHybridSim(inp: HybridSimInput): {
     a_smooth: 0,
     T_bldc_C: 25,
     T_esc_C: 25,
-    T_ice_C: 80,  // lämmin moottori (idle-lämpötila)
+    T_ice_C: 80,  // warm engine (idle temperature)
   };
 
   const data: HybridPoint[] = [];
@@ -87,13 +87,13 @@ export function runHybridSim(inp: HybridSimInput): {
     if (point.eta_sys > 0) { eta_sum += point.eta_sys; eta_n++; }
 
     if (t100 === null && st.v_ms >= 100 / 3.6) {
-      // Interpoloi tarkka ylityspiste
+      // Interpolate exact crossing point
       const frac = (100 / 3.6 - v_before) / (st.v_ms - v_before);
       t100 = t_before + frac * DT;
     }
 
     if (t75m === null && st.x_m >= 75) {
-      // Interpoloi tarkka ylityspiste
+      // Interpolate exact crossing point
       const frac = (75 - x_before) / (st.x_m - x_before);
       t75m = t_before + frac * DT;
     }
