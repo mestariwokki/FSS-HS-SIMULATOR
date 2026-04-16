@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { runHybridSim, type HybridSimMode, type HybridSummary } from '../../simulation/motor/runHybridSim';
 import type { HybridPoint } from '../../simulation/motor/hybridStep';
 import { LineChart } from '../charts/LineChart';
@@ -6,6 +6,7 @@ import { HybridBldcMap } from '../charts/HybridBldcMap';
 import { HybridIceMap } from '../charts/HybridIceMap';
 import { ParamGroup } from '../common/ParamGroup';
 import { ICE_TORQUE_CURVE } from '../../simulation/motor/iceEngine';
+import { exportHybridCSV } from '../../utils/csvExport';
 
 // ── Section header ────────────────────────────────────────────────────────
 function SHead({ children }: { children: React.ReactNode }) {
@@ -106,6 +107,7 @@ export function HybridTab() {
   const [data, setData] = useState<HybridPoint[]>([]);
   const [summary, setSummary] = useState<HybridSummary | null>(null);
   const [runMs, setRunMs] = useState(0);
+  const [status, setStatus] = useState('Ready.');
 
   // ── ICE peak info (static) ────────────────────────────────────────────────
   const icePeakTorque = Math.max(...ICE_TORQUE_CURVE.map(c => c[1]));
@@ -113,8 +115,9 @@ export function HybridTab() {
     ...ICE_TORQUE_CURVE.map(([rpm, T]: [number, number]) => T * rpm * 2 * Math.PI / 60 / 1000)
   );
 
-  // ── Auto-run on param change (debounced 450 ms) ───────────────────────────
-  const runSim = useCallback(() => {
+  // ── Manual run ────────────────────────────────────────────────────────────
+  const handleStart = useCallback(() => {
+    setStatus('Simulating...');
     const t0 = performance.now();
     const result = runHybridSim({
       P_em_peak_kW: P_em_peak,
@@ -144,9 +147,11 @@ export function HybridTab() {
       duration_s: duration,
       cruise_speed_kmh: cruise_spd,
     });
+    const ms = Math.round(performance.now() - t0);
     setData(result.data);
     setSummary(result.summary);
-    setRunMs(Math.round(performance.now() - t0));
+    setRunMs(ms);
+    setStatus(`Done — ${ms} ms`);
   }, [
     P_em_peak, P_em_cont, T_em_peak, em_gear, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
@@ -155,10 +160,12 @@ export function HybridTab() {
     mode, duration, cruise_spd,
   ]);
 
-  useEffect(() => {
-    const id = setTimeout(runSim, 450);
-    return () => clearTimeout(id);
-  }, [runSim]);
+  const handleReset = useCallback(() => {
+    setData([]);
+    setSummary(null);
+    setRunMs(0);
+    setStatus('Reset.');
+  }, []);
 
   // Operating point for efficiency maps: moment of peak EM power
   const maxPt = useMemo(() =>
@@ -203,9 +210,48 @@ export function HybridTab() {
             </button>
           ))}
           <span style={{ fontSize: '10px', color: '#aaa', marginLeft: '8px' }}>
-            {runMs} ms
+            {runMs > 0 ? `${runMs} ms` : ''}
           </span>
         </div>
+      </div>
+
+      {/* ── Run bar ──────────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: '#0f0f14', border: '1px solid #2d2d38',
+        padding: '10px 14px', marginBottom: '20px',
+      }}>
+        <button
+          onClick={handleStart}
+          style={{
+            background: '#1a1a1a', color: '#4caf50', border: '1px solid #4caf50',
+            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+          }}
+        >
+          ▶ {mode === 'acc75' ? 'RUN 75M' : mode === 'acc100' ? 'RUN 0–100' : 'START'}
+        </button>
+        <button
+          onClick={handleReset}
+          style={{
+            background: '#1a1a1a', color: '#ddd', border: '1px solid #555',
+            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+          }}
+        >
+          ↺ RESET
+        </button>
+        <button
+          onClick={() => exportHybridCSV(data, mode)}
+          disabled={data.length === 0}
+          style={{
+            background: '#1a1a1a', color: '#4db6ac', border: '1px solid #4db6ac',
+            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px',
+            cursor: data.length === 0 ? 'default' : 'pointer',
+            marginLeft: '8px', opacity: data.length === 0 ? 0.4 : 1,
+          }}
+        >
+          ↓ CSV
+        </button>
+        <span style={{ color: '#ccc', fontSize: '12px', marginLeft: '8px' }}>{status}</span>
       </div>
 
       {/* ── Main layout: params left, charts right ───────────────────────── */}

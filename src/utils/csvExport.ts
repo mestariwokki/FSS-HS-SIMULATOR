@@ -1,4 +1,5 @@
 import type { BatteryDataPoint, MotorDataPoint } from '../types';
+import type { HybridPoint } from '../simulation/motor/hybridStep';
 
 export function exportBatteryCSV(data: BatteryDataPoint[], mode: string, cycles: number): void {
   if (data.length === 0) return;
@@ -38,6 +39,27 @@ export function exportMotorCSV(data: MotorDataPoint[]): void {
 
   const csv = [hdr, ...rows].join('\n');
   downloadCSV(csv, `FSO_motor_${timestamp()}.csv`);
+}
+
+export function exportHybridCSV(data: HybridPoint[], mode: string): void {
+  if (data.length === 0) return;
+
+  const hdr = 't_s,v_kmh,a_ms2,x_m,P_demand_kW,P_em_kW,P_ice_kW,P_total_kW,T_em_Nm,T_ice_Nm,T_total_Nm,RPM_wheel,RPM_ice,N_f_N,N_r_N,soc_pct,I_bat_A,V_bat_V,wh_em_Wh,fuel_g,eta_sys_pct,T_BLDC1_C,T_BLDC2_C,T_ESC1_C,T_ESC2_C,T_ice_C,eta_ice_pct';
+  const rows = data.map(r => [
+    r.t.toFixed(3), r.v_kmh.toFixed(2), r.a_ms2.toFixed(3), r.x_m.toFixed(2),
+    r.P_demand_kW.toFixed(3), r.P_em_kW.toFixed(3), r.P_ice_kW.toFixed(3), r.P_total_kW.toFixed(3),
+    r.T_em_Nm.toFixed(2), r.T_ice_Nm.toFixed(2), r.T_total_Nm.toFixed(2),
+    r.RPM_wheel.toFixed(0), r.RPM_ice.toFixed(0),
+    r.N_f.toFixed(1), r.N_r.toFixed(1),
+    r.soc.toFixed(2), r.I_bat.toFixed(2), r.V_bat.toFixed(3),
+    r.wh_em.toFixed(3), r.fuel_g.toFixed(3),
+    r.eta_sys.toFixed(1),
+    r.T_BLDC1.toFixed(1), r.T_BLDC2.toFixed(1), r.T_ESC1.toFixed(1), r.T_ESC2.toFixed(1),
+    r.T_ice_C.toFixed(1), (r.eta_ice * 100).toFixed(1),
+  ].join(','));
+
+  const csv = [hdr, ...rows].join('\n');
+  downloadCSV(csv, `FSO_hybrid_${mode.toUpperCase()}_${timestamp()}.csv`);
 }
 
 function timestamp(): string {
