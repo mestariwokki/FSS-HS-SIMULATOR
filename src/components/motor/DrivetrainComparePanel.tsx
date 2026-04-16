@@ -7,11 +7,11 @@ import { ICE_TORQUE_CURVE, interpICETorque } from '../../simulation/motor/iceEng
 function SectionHead({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: '10px',
-      color: '#4fc3f7',
+      fontSize: '9px',
+      color: 'var(--text-dim)',
       textTransform: 'uppercase',
       letterSpacing: '2px',
-      borderBottom: '1px solid #1e3a4a',
+      borderBottom: '1px solid var(--border-dim)',
       paddingBottom: '4px',
       marginTop: '14px',
       marginBottom: '8px',
@@ -40,39 +40,38 @@ function ColumnHead({ children, color }: { children: React.ReactNode; color: str
 }
 
 // ── Derived-value row ─────────────────────────────────────────────────────
-function DerivedRow({ label, value, unit, color = '#ddd', term }: {
+function DerivedRow({ label, value, unit, color = 'var(--text-primary)', term }: {
   label: string; value: string; unit: string; color?: string; term?: string;
 }) {
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline', marginBottom: '5px', fontSize: '12px' }}>
-      <span style={{ color: '#aaa', minWidth: '120px', whiteSpace: 'nowrap' }}>
+      <span style={{ color: 'var(--text-dim)', minWidth: '120px', whiteSpace: 'nowrap' }}>
         {term ? <InfoTooltip term={term} label={label} /> : label}
       </span>
       <span style={{ color, fontWeight: 'bold' }}>{value}</span>
-      <span style={{ color: '#aaa', fontSize: '11px' }}>{unit}</span>
+      <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>{unit}</span>
     </div>
   );
 }
 
 // ── Hybrid summary stat ───────────────────────────────────────────────────
-function StatCard({ label, value, unit, color = '#ddd' }: {
+function StatCard({ label, value, unit, color = 'var(--text-primary)' }: {
   label: string; value: string; unit: string; color?: string;
 }) {
   return (
     <div style={{
-      background: '#1a1a22',
-      border: '1px solid #2a2a3a',
-      borderRadius: '3px',
+      background: 'var(--bg-panel)',
+      border: '1px solid var(--border-main)',
       padding: '10px 14px',
       textAlign: 'center',
       minWidth: '110px',
     }}>
-      <div style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
         {label}
       </div>
       <div style={{ fontSize: '20px', fontWeight: 'bold', color }}>
         {value}
-        <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '3px' }}>{unit}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>{unit}</span>
       </div>
     </div>
   );
@@ -210,14 +209,13 @@ function HybridSummary(p: HybridSummaryProps) {
     <div style={{
       marginTop: '20px',
       padding: '16px',
-      background: '#14141e',
-      border: '1px solid #2a2a3a',
-      borderRadius: '4px',
+      background: 'var(--bg-panel)',
+      border: '1px solid var(--border-main)',
     }}>
       <div style={{
-        fontSize: '11px', color: '#fff', textTransform: 'uppercase',
+        fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase',
         letterSpacing: '2px', marginBottom: '14px',
-        borderBottom: '1px solid #2a2a3a', paddingBottom: '6px',
+        borderBottom: '1px solid var(--border-dim)', paddingBottom: '6px',
       }}>
         Hybrid system — summary
       </div>

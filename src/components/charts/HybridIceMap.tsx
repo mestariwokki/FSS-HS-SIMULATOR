@@ -166,7 +166,7 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
     <canvas
       ref={ref}
       height={180}
-      style={{ display: 'block', width: '100%', background: '#111', border: '1px solid #1e1e1e' }}
+      style={{ display: 'block', width: '100%', background: '#0d0d14', border: '1px solid #1a1a24' }}
     />
   );
 }

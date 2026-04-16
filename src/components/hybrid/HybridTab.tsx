@@ -12,8 +12,8 @@ import { exportHybridCSV } from '../../utils/csvExport';
 function SHead({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: '10px', color: '#4fc3f7', textTransform: 'uppercase',
-      letterSpacing: '2px', borderBottom: '1px solid #1e3a4a',
+      fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase',
+      letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)',
       paddingBottom: '3px', marginTop: '12px', marginBottom: '8px',
     }}>
       {children}
@@ -29,17 +29,17 @@ function SCard({
 }) {
   return (
     <div style={{
-      background: '#131318', border: '1px solid #2a2a3a', borderRadius: '3px',
+      background: 'var(--bg-panel)', border: '1px solid var(--border-main)',
       padding: '10px 16px', minWidth: '120px', flex: '1 1 120px',
     }}>
-      <div style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>
+      <div style={{ fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>
         {label}
       </div>
       <div style={{ fontSize: '22px', fontWeight: 'bold', color, lineHeight: 1 }}>
         {value}
-        <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '3px' }}>{unit}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>{unit}</span>
       </div>
-      {sub && <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>{sub}</div>}
     </div>
   );
 }
@@ -47,7 +47,7 @@ function SCard({
 // ── Chart label ───────────────────────────────────────────────────────────
 function ChartLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+    <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
       {children}
     </div>
   );
@@ -182,34 +182,33 @@ export function HybridTab() {
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px',
-        borderBottom: '1px solid #1a1a2a', paddingBottom: '12px',
+        borderBottom: '1px solid var(--border-dim)', paddingBottom: '12px',
       }}>
         <div>
-          <div style={{ fontSize: '14px', color: '#fff', fontWeight: 'bold', letterSpacing: '1px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 'bold', letterSpacing: '1px' }}>
             Hybrid System — Combined Simulation
           </div>
-          <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>
             Electric motor + ICE (MT-07 690cc) · 2RC Thevenin battery model · real-time computation
           </div>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
           {(['acc75', 'acc100', 'cruise', 'duration'] as HybridSimMode[]).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
               style={{
-                background: mode === m ? '#4fc3f7' : '#1a1a22',
-                color: mode === m ? '#000' : '#888',
-                border: '1px solid ' + (mode === m ? '#4fc3f7' : '#333'),
+                background: mode === m ? 'var(--bg-active)' : 'var(--bg-input)',
+                color: mode === m ? 'var(--accent-em)' : 'var(--text-dim)',
+                border: `1px solid ${mode === m ? 'var(--accent-em)' : 'var(--border-main)'}`,
                 padding: '5px 14px', fontSize: '11px', cursor: 'pointer',
-                fontWeight: mode === m ? 'bold' : 'normal',
                 textTransform: 'uppercase', letterSpacing: '1px',
               }}
             >
               {MODE_LABELS[m]}
             </button>
           ))}
-          <span style={{ fontSize: '10px', color: '#aaa', marginLeft: '8px' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-faint)', marginLeft: '8px' }}>
             {runMs > 0 ? `${runMs} ms` : ''}
           </span>
         </div>
@@ -218,14 +217,14 @@ export function HybridTab() {
       {/* ── Run bar ──────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
-        background: '#0f0f14', border: '1px solid #2d2d38',
-        padding: '10px 14px', marginBottom: '20px',
+        background: 'var(--bg-root)', border: '1px solid var(--border-main)',
+        padding: '9px 14px', marginBottom: '20px',
       }}>
         <button
           onClick={handleStart}
           style={{
-            background: '#1a1a1a', color: '#4caf50', border: '1px solid #4caf50',
-            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+            background: 'var(--bg-active)', color: 'var(--accent-vehicle)', border: '1px solid var(--accent-vehicle)',
+            padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
           }}
         >
           ▶ {mode === 'acc75' ? 'RUN 75M' : mode === 'acc100' ? 'RUN 0–100' : 'START'}
@@ -233,8 +232,8 @@ export function HybridTab() {
         <button
           onClick={handleReset}
           style={{
-            background: '#1a1a1a', color: '#ddd', border: '1px solid #555',
-            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer',
+            background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border-bright)',
+            padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
           }}
         >
           ↺ RESET
@@ -243,15 +242,14 @@ export function HybridTab() {
           onClick={() => exportHybridCSV(data, mode)}
           disabled={data.length === 0}
           style={{
-            background: '#1a1a1a', color: '#4db6ac', border: '1px solid #4db6ac',
-            padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px',
-            cursor: data.length === 0 ? 'default' : 'pointer',
-            marginLeft: '8px', opacity: data.length === 0 ? 0.4 : 1,
+            background: 'var(--bg-panel)', color: 'var(--accent-em)', border: '1px solid var(--accent-em)',
+            padding: '6px 18px', fontSize: '12px', cursor: 'pointer',
+            marginLeft: '6px', letterSpacing: '1px',
           }}
         >
           ↓ CSV
         </button>
-        <span style={{ color: '#ccc', fontSize: '12px', marginLeft: '8px' }}>{status}</span>
+        <span style={{ color: 'var(--text-dim)', fontSize: '12px', marginLeft: '8px' }}>{status}</span>
       </div>
 
       {/* ── Main layout: params left, charts right ───────────────────────── */}
@@ -262,10 +260,10 @@ export function HybridTab() {
 
           {/* EM */}
           <div style={{
-            background: '#0d1a24', border: '1px solid #1e3a4a',
-            borderRadius: '3px', padding: '12px 14px', marginBottom: '10px',
+            background: 'var(--bg-panel)', border: '1px solid #1e3a4a',
+            padding: '12px 14px', marginBottom: '10px',
           }}>
-            <div style={{ fontSize: '11px', color: '#4fc3f7', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--accent-em)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
               Electric Motor (BLDC)
             </div>
             <SHead>Power &amp; torque</SHead>
@@ -280,10 +278,10 @@ export function HybridTab() {
 
           {/* ICE */}
           <div style={{
-            background: '#1a1200', border: '1px solid #3a2a00',
-            borderRadius: '3px', padding: '12px 14px', marginBottom: '10px',
+            background: 'var(--bg-panel)', border: '1px solid #3a2a00',
+            padding: '12px 14px', marginBottom: '10px',
           }}>
-            <div style={{ fontSize: '11px', color: '#ffa726', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--accent-ice)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
               ICE — MT-07 690cc
             </div>
             <SHead>Kinematics</SHead>
@@ -292,19 +290,19 @@ export function HybridTab() {
             <SHead>Behaviour</SHead>
             <ParamGroup label="BSFC" value={bsfc} onChange={setBsfc} min={200} max={500} step={10} unit="g/kWh" infoTerm="bsfc" />
             <ParamGroup label="Start delay" value={ice_start_delay} onChange={setIceStartDelay} min={0} max={5} step={0.1} unit="s" />
-            <div style={{ marginTop: '8px', padding: '6px 8px', background: '#111', borderRadius: '2px', fontSize: '11px', color: '#aaa', lineHeight: 1.7 }}>
-              Peak power: <span style={{ color: '#ffa726' }}>{icePeakPower.toFixed(1)}</span> kW<br />
-              Peak torque: <span style={{ color: '#ffa726' }}>{icePeakTorque.toFixed(0)}</span> Nm<br />
-              @ ratio {ice_gear}×: <span style={{ color: '#4fc3f7' }}>{(icePeakTorque * ice_gear * 0.97).toFixed(0)}</span> Nm at wheel
+            <div style={{ marginTop: '8px', padding: '6px 8px', background: 'var(--bg-root)', fontSize: '11px', color: 'var(--text-dim)', lineHeight: 1.7 }}>
+              Peak power: <span style={{ color: 'var(--accent-ice)' }}>{icePeakPower.toFixed(1)}</span> kW<br />
+              Peak torque: <span style={{ color: 'var(--accent-ice)' }}>{icePeakTorque.toFixed(0)}</span> Nm<br />
+              @ ratio {ice_gear}×: <span style={{ color: 'var(--accent-em)' }}>{(icePeakTorque * ice_gear * 0.97).toFixed(0)}</span> Nm at wheel
             </div>
           </div>
 
           {/* Vehicle */}
           <div style={{
-            background: '#0f1a0f', border: '1px solid #1a3a1a',
-            borderRadius: '3px', padding: '12px 14px', marginBottom: '10px',
+            background: 'var(--bg-panel)', border: '1px solid #1a3a1a',
+            padding: '12px 14px', marginBottom: '10px',
           }}>
-            <div style={{ fontSize: '11px', color: '#66bb6a', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--accent-vehicle)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
               Vehicle
             </div>
             <ParamGroup label="Mass" value={mass} onChange={setMass} min={100} max={700} step={5} unit="kg" />
@@ -316,7 +314,7 @@ export function HybridTab() {
             <ParamGroup label="h_CG" value={h_cg} onChange={setHcg} min={0.10} max={0.70} step={0.01} unit="m" />
             <ParamGroup label="Wheelbase" value={wheelbase} onChange={setWheelbase} min={1.0} max={2.5} step={0.01} unit="m" />
             <ParamGroup label="Front weight dist." value={f_front} onChange={setFFront} min={0.30} max={0.70} step={0.01} unit="" />
-            <div style={{ marginTop: '6px', padding: '5px 8px', background: '#111', borderRadius: '2px', fontSize: '10px', color: '#aaa', lineHeight: 1.6 }}>
+            <div style={{ marginTop: '6px', padding: '5px 8px', background: 'var(--bg-root)', fontSize: '10px', color: 'var(--text-dim)', lineHeight: 1.6 }}>
               Front axle: 2× hub motor (EM)<br />
               Rear axle: ICE + gearbox
             </div>
@@ -324,10 +322,10 @@ export function HybridTab() {
 
           {/* Battery */}
           <div style={{
-            background: '#10101a', border: '1px solid #2a2a3a',
-            borderRadius: '3px', padding: '12px 14px', marginBottom: '10px',
+            background: 'var(--bg-panel)', border: '1px solid #2a1a3a',
+            padding: '12px 14px', marginBottom: '10px',
           }}>
-            <div style={{ fontSize: '11px', color: '#ce93d8', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--accent-battery)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
               Battery — 2RC Thevenin
             </div>
             <ParamGroup label="Series (S)" value={pack_series} onChange={setPackSeries} min={1} max={30} step={1} unit="S" infoTerm="V_batt" />
@@ -335,7 +333,7 @@ export function HybridTab() {
             <ParamGroup label="Capacity" value={pack_Q_Ah} onChange={setPackQ} min={1} max={100} step={0.5} unit="Ah" />
             <ParamGroup label="Temperature" value={pack_T_celsius} onChange={setPackTemp} min={-20} max={60} step={1} unit="°C" />
             <ParamGroup label="SOC₀" value={soc0} onChange={setSoc0} min={10} max={100} step={1} unit="%" infoTerm="SOC" />
-            <div style={{ marginTop: '8px', padding: '6px 8px', background: '#111', borderRadius: '2px', fontSize: '11px', color: '#aaa', lineHeight: 1.7 }}>
+            <div style={{ marginTop: '8px', padding: '6px 8px', background: 'var(--bg-root)', fontSize: '11px', color: 'var(--text-dim)', lineHeight: 1.7 }}>
               NMC R0/R1/R2 looked up from SOC table · temperature correction for R0
             </div>
           </div>
@@ -343,10 +341,10 @@ export function HybridTab() {
           {/* Mode-specific params */}
           {(mode === 'cruise' || mode === 'duration') && (
             <div style={{
-              background: '#131318', border: '1px solid #2a2a3a',
-              borderRadius: '3px', padding: '12px 14px',
+              background: 'var(--bg-panel)', border: '1px solid var(--border-main)',
+              padding: '12px 14px',
             }}>
-              <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Simulation parameters
               </div>
               {mode === 'cruise' && (
@@ -363,10 +361,10 @@ export function HybridTab() {
           {/* Summary cards */}
           {summary && (
             <div style={{
-              background: '#0d0d14', border: '1px solid #1e1e2e', borderRadius: '4px',
+              background: 'var(--bg-panel)', border: '1px solid var(--border-main)',
               padding: '16px', marginBottom: '20px',
             }}>
-              <div style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
                 Summary
               </div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -444,7 +442,7 @@ export function HybridTab() {
             <ChartLabel>Efficiency maps — ● peak power operating point</ChartLabel>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               <div>
-                <div style={{ fontSize: '9px', color: '#4fc3f7', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>BLDC1 — Front left</div>
+                <div style={{ fontSize: '9px', color: 'var(--accent-em)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>BLDC1 — Front left</div>
                 <HybridBldcMap
                   label="BLDC1"
                   labelColor="#4fc3f7"
@@ -454,6 +452,7 @@ export function HybridTab() {
               </div>
               <div>
                 <div style={{ fontSize: '9px', color: '#81d4fa', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>BLDC2 — Front right</div>
+
                 <HybridBldcMap
                   label="BLDC2"
                   labelColor="#81d4fa"
@@ -462,7 +461,7 @@ export function HybridTab() {
                 />
               </div>
               <div>
-                <div style={{ fontSize: '9px', color: '#ffa726', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>ICE — MT-07 690cc</div>
+                <div style={{ fontSize: '9px', color: 'var(--accent-ice)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '1px' }}>ICE — MT-07 690cc</div>
                 <HybridIceMap
                   bsfc_gkWh={bsfc}
                   opRpm={maxPt?.RPM_ice}
@@ -474,15 +473,15 @@ export function HybridTab() {
 
           {/* Toggle: show components */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Charts
             </span>
             <button
               onClick={() => setShowComponents(s => !s)}
               style={{
-                background: showComponents ? '#222' : '#1a1a22',
-                color: showComponents ? '#4fc3f7' : '#555',
-                border: '1px solid ' + (showComponents ? '#4fc3f7' : '#333'),
+                background: showComponents ? 'var(--bg-active)' : 'var(--bg-input)',
+                color: showComponents ? 'var(--accent-em)' : 'var(--text-faint)',
+                border: `1px solid ${showComponents ? 'var(--accent-em)' : 'var(--border-main)'}`,
                 padding: '3px 10px', fontSize: '10px', cursor: 'pointer',
                 textTransform: 'uppercase', letterSpacing: '1px',
               }}

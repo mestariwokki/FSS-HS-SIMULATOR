@@ -1,16 +1,16 @@
 const MONO: React.CSSProperties = {
-  fontFamily: "'Courier New', monospace",
-  color: '#4db6ac',
-  fontSize: '13px',
+  fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+  color: 'var(--accent-em)',
+  fontSize: '12px',
   lineHeight: 2.0,
 };
 
 const HEADING: React.CSSProperties = {
-  fontSize: '11px',
-  color: '#fff',
+  fontSize: '10px',
+  color: 'var(--text-dim)' as unknown as string,
   textTransform: 'uppercase',
   letterSpacing: '2px',
-  borderBottom: '1px solid #333',
+  borderBottom: '1px solid var(--border-dim)' as unknown as string,
   paddingBottom: '5px',
   marginBottom: '12px',
   marginTop: '24px',
@@ -18,7 +18,7 @@ const HEADING: React.CSSProperties = {
 
 const DESC: React.CSSProperties = {
   fontSize: '13px',
-  color: '#bbb',
+  color: 'var(--text-secondary)' as unknown as string,
   lineHeight: 1.8,
   marginBottom: '10px',
 };
@@ -26,7 +26,7 @@ const DESC: React.CSSProperties = {
 export function FormulasTab() {
   return (
     <div style={{ maxWidth: '900px' }}>
-      <h2 style={{ fontSize: '16px', color: '#fff', fontWeight: 'normal', marginBottom: '8px' }}>
+      <h2 style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 'normal', marginBottom: '8px' }}>
         Simulation Formulas Reference
       </h2>
       <p style={{ ...DESC, marginBottom: '20px' }}>

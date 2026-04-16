@@ -1,9 +1,36 @@
 :root {
+  /* ── Background layers ─────────────────────────────────────────── */
+  --bg-root:    #080810;
+  --bg-panel:   #0d0d14;
+  --bg-input:   #0a0a12;
+  --bg-hover:   #14141e;
+  --bg-active:  #1a1a28;
+
+  /* ── Borders ───────────────────────────────────────────────────── */
+  --border-dim:    #1a1a24;
+  --border-main:   #252534;
+  --border-bright: #3a3a50;
+
+  /* ── Text ──────────────────────────────────────────────────────── */
+  --text-primary:   #f0f0f0;
+  --text-secondary: #aaaabc;
+  --text-dim:       #666678;
+  --text-faint:     #3a3a50;
+
+  /* ── Accent palette ────────────────────────────────────────────── */
+  --accent-em:      #4fc3f7;   /* electric motor / blue */
+  --accent-ice:     #ffa726;   /* combustion engine / orange */
+  --accent-vehicle: #66bb6a;   /* vehicle / green */
+  --accent-battery: #ce93d8;   /* battery / purple */
+  --accent-alert:   #ef5350;   /* alert / red */
+  --accent-total:   #e8e8e8;   /* total / white */
+
+  /* ── Typography ────────────────────────────────────────────────── */
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
-  color: #ddd;
-  background: #0e0e14;
+  color: var(--text-secondary);
+  background: var(--bg-root);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -13,14 +40,18 @@
 body {
   margin: 0;
   padding: 0;
-  background: #0e0e14;
+  background: var(--bg-root);
 }
 
 a {
-  color: #4fc3f7;
+  color: var(--accent-em);
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
 }

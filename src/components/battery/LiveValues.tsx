@@ -28,7 +28,7 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
 
   return (
     <div>
-      <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
         Pack -- {pack.series}S{pack.parallel}P
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -45,7 +45,7 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
       {/* SPM details */}
       {last && (
         <div style={{ marginTop: '10px' }}>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px', cursor: 'pointer' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px', cursor: 'pointer' }}>
             SPM -- Butler-Volmer
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -60,7 +60,7 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
       )}
 
       {/* SoH values */}
-      <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px', marginTop: '16px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px', marginTop: '16px' }}>
         SoH -- Aging (2RC ECM)
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -71,7 +71,7 @@ export function LiveValues({ data, pack, ecm, simState, duration }: LiveValuesPr
       </div>
 
       {/* Time */}
-      <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px', marginTop: '16px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px', marginTop: '16px' }}>
         Run Parameters
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>

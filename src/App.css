@@ -20,6 +20,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.45;
 }
 
 select {
@@ -36,18 +37,57 @@ td, th {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111;
+  background: var(--bg-root);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--border-bright);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: #555570;
+}
+
+/* ── Shared input style ────────────────────────────────────────────── */
+input[type="number"],
+select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-main);
+  padding: 4px 8px;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 13px;
+  transition: border-color 0.12s;
+}
+
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--border-bright);
+}
+
+input[type="number"]:hover,
+select:hover {
+  border-color: var(--border-bright);
+}
+
+/* ── Panel section header ──────────────────────────────────────────── */
+.shead {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-dim);
+  padding-bottom: 5px;
+  margin: 14px 0 10px;
+}
+
+.shead:first-child {
+  margin-top: 0;
 }

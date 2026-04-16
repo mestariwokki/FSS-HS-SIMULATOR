@@ -12,33 +12,39 @@ interface ValueBoxProps {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  blue: '#4fc3f7',
-  green: '#66bb6a',
-  red: '#ef5350',
+  blue:   'var(--accent-em)',
+  green:  'var(--accent-vehicle)',
+  red:    'var(--accent-alert)',
   yellow: '#ffca28',
-  purple: '#ce93d8',
-  orange: '#ffa726',
+  purple: 'var(--accent-battery)',
+  orange: 'var(--accent-ice)',
 };
 
 export function ValueBox({ label, value, unit, color, tooltip, fontSize, infoTerm }: ValueBoxProps) {
-  const valColor = color ? COLOR_MAP[color] : '#ddd';
+  const valColor = color ? COLOR_MAP[color] : 'var(--text-primary)';
   return (
     <div
       className="vbox"
       title={infoTerm ? undefined : tooltip}
       style={{
-        background: '#1a1a1a',
-        border: '1px solid #222',
-        padding: '9px 12px',
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-main)',
+        padding: '8px 12px',
         cursor: tooltip && !infoTerm ? 'help' : undefined,
       }}
     >
-      <div style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>
+      <div style={{
+        fontSize: '10px',
+        color: 'var(--text-dim)',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        marginBottom: '3px',
+      }}>
         {infoTerm ? <InfoTooltip term={infoTerm} label={label} /> : label}
       </div>
-      <div style={{ fontSize: fontSize ?? '20px', fontWeight: 'bold', color: valColor }}>
+      <div style={{ fontSize: fontSize ?? '18px', fontWeight: 'bold', color: valColor }}>
         {value}
-        <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '2px' }}>{unit}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>{unit}</span>
       </div>
     </div>
   );
