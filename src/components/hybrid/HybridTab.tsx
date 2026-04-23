@@ -611,7 +611,36 @@ export function HybridTab() {
             </div>
           </div>
 
-          {/* ── Chart 5: Torques ────────────────────────────────────────── */}
+          {/* ── Chart 5: V_bat + RPM vs speed ──────────────────────────── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <ChartLabel>Battery Terminal Voltage (V)</ChartLabel>
+              <LineChart
+                data={d}
+                series={[{ key: 'V_bat', color: '#ffca28', label: 'V_bat', lineWidth: 2 }]}
+                xKey="t"
+                height={160}
+                yUnit=" V"
+                hLines={[{ value: pack_series * 2.75, color: 'rgba(239,83,80,0.4)' }]}
+              />
+            </div>
+            <div>
+              <ChartLabel>EM Speed — RPM &amp; km/h <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>(RPM_wheel = EM hub motor shaft speed)</span></ChartLabel>
+              <LineChart
+                data={d}
+                series={[
+                  { key: 'RPM_wheel', color: '#4fc3f7', label: 'RPM_em', lineWidth: 2 },
+                  { key: 'v_kmh',     color: '#66bb6a', label: 'km/h',   lineWidth: 1.5, dashed: true },
+                ]}
+                xKey="t"
+                height={160}
+                yUnit=""
+                yMin={0}
+              />
+            </div>
+          </div>
+
+          {/* ── Chart 6: Torques ────────────────────────────────────────── */}
           {showComponents && (
             <div style={{ marginBottom: '16px' }}>
               <ChartLabel>Wheel torques (Nm)</ChartLabel>
