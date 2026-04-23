@@ -108,6 +108,7 @@ export function HybridTab() {
   const [summary, setSummary] = useState<HybridSummary | null>(null);
   const [runMs, setRunMs] = useState(0);
   const [status, setStatus] = useState('Ready.');
+  const [hasRun, setHasRun] = useState(false);
 
   // ── ICE peak info (static) ────────────────────────────────────────────────
   const icePeakTorque = Math.max(...ICE_TORQUE_CURVE.map(c => c[1]));
@@ -151,6 +152,7 @@ export function HybridTab() {
     setData(result.data);
     setSummary(result.summary);
     setRunMs(ms);
+    setHasRun(true);
     setStatus(`Done — ${ms} ms`);
   }, [
     P_em_peak, P_em_cont, T_em_peak, em_gear, eta_em, eta_regen,
@@ -164,6 +166,7 @@ export function HybridTab() {
     setData([]);
     setSummary(null);
     setRunMs(0);
+    setHasRun(false);
     setStatus('Reset.');
   }, []);
 
@@ -208,48 +211,52 @@ export function HybridTab() {
               {MODE_LABELS[m]}
             </button>
           ))}
-          <span style={{ fontSize: '10px', color: 'var(--text-faint)', marginLeft: '8px' }}>
-            {runMs > 0 ? `${runMs} ms` : ''}
-          </span>
         </div>
       </div>
 
       {/* ── Run bar ──────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
-        background: 'var(--bg-root)', border: '1px solid var(--border-main)',
-        padding: '9px 14px', marginBottom: '20px',
+        background: '#0f0f14', border: '1px solid #2d2d38',
+        padding: '10px 14px', marginBottom: '16px',
       }}>
         <button
           onClick={handleStart}
           style={{
-            background: 'var(--bg-active)', color: 'var(--accent-vehicle)', border: '1px solid var(--accent-vehicle)',
-            padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
+            background: '#66bb6a', color: '#000', border: 'none',
+            padding: '8px 20px', fontSize: '13px', fontWeight: 'bold',
+            cursor: 'pointer', fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
           }}
         >
-          ▶ {mode === 'acc75' ? 'RUN 75M' : mode === 'acc100' ? 'RUN 0–100' : 'START'}
+          RUN
         </button>
         <button
           onClick={handleReset}
           style={{
-            background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border-bright)',
-            padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
+            background: '#333', color: '#fff', border: '1px solid #444',
+            padding: '8px 16px', fontSize: '13px', cursor: 'pointer',
+            fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
           }}
         >
-          ↺ RESET
+          RESET
         </button>
-        <button
-          onClick={() => exportHybridCSV(data, mode)}
-          disabled={data.length === 0}
-          style={{
-            background: 'var(--bg-panel)', color: 'var(--accent-em)', border: '1px solid var(--accent-em)',
-            padding: '6px 18px', fontSize: '12px', cursor: 'pointer',
-            marginLeft: '6px', letterSpacing: '1px',
-          }}
-        >
-          ↓ CSV
-        </button>
-        <span style={{ color: 'var(--text-dim)', fontSize: '12px', marginLeft: '8px' }}>{status}</span>
+        {hasRun && (
+          <button
+            onClick={() => exportHybridCSV(data, mode)}
+            style={{
+              background: '#1a1a1a', color: '#4db6ac', border: '1px solid #4db6ac',
+              padding: '8px 18px', fontSize: '13px', cursor: 'pointer', marginLeft: '8px',
+              fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+            }}
+          >
+            CSV
+          </button>
+        )}
+        {hasRun && (
+          <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontFamily: 'monospace' }}>
+            {runMs} ms
+          </span>
+        )}
       </div>
 
       {/* ── Main layout: params left, charts right ───────────────────────── */}
