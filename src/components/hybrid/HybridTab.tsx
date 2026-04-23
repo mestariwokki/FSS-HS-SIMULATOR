@@ -107,7 +107,6 @@ export function HybridTab() {
   const [data, setData] = useState<HybridPoint[]>([]);
   const [summary, setSummary] = useState<HybridSummary | null>(null);
   const [runMs, setRunMs] = useState(0);
-  const [status, setStatus] = useState('Ready.');
   const [hasRun, setHasRun] = useState(false);
 
   // ── ICE peak info (static) ────────────────────────────────────────────────
@@ -118,7 +117,6 @@ export function HybridTab() {
 
   // ── Manual run ────────────────────────────────────────────────────────────
   const handleStart = useCallback(() => {
-    setStatus('Simulating...');
     const t0 = performance.now();
     const result = runHybridSim({
       P_em_peak_kW: P_em_peak,
@@ -153,7 +151,6 @@ export function HybridTab() {
     setSummary(result.summary);
     setRunMs(ms);
     setHasRun(true);
-    setStatus(`Done — ${ms} ms`);
   }, [
     P_em_peak, P_em_cont, T_em_peak, em_gear, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
@@ -167,7 +164,6 @@ export function HybridTab() {
     setSummary(null);
     setRunMs(0);
     setHasRun(false);
-    setStatus('Reset.');
   }, []);
 
   // Operating point for efficiency maps: moment of peak EM power
