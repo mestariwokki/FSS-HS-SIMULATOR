@@ -27,7 +27,6 @@ export interface HybridConfig {
   // Electric motor (front axle, 2× hub motor, combined value)
   P_em_peak_kW: number;   // combined EM peak power
   P_em_cont_kW: number;   // combined EM continuous power
-  T_em_peak_Nm: number;   // max wheel torque from EM (at low speeds)
   eta_em: number;         // ESC + winding efficiency (electric→mechanical)
   eta_regen: number;
   em_gear: number;        // EM internal planetary gear (motor shaft → wheel)
@@ -169,9 +168,8 @@ export function hybridStep(
     state.boost_t < 5.0 ? cfg.P_em_peak_kW : cfg.P_em_cont_kW,
     P_em_bat_limit_kW,   // battery limit
   );
-  const T_em_power_limit = P_em_avail_kW * 1000 / omega_wheel;
-  const T_em_motor_limit = Math.min(cfg.T_em_peak_Nm, T_em_power_limit);
-  const F_em_motor_max = T_em_motor_limit / cfg.wheel_r_m;
+  const T_em_wheel_limit = P_em_avail_kW * 1000 / omega_wheel;
+  const F_em_motor_max = T_em_wheel_limit / cfg.wheel_r_m;
   const F_em_max = Math.min(F_em_motor_max, F_em_trac_limit);
 
   // ── ICE capability (rear axle) ────────────────────────────────────────────

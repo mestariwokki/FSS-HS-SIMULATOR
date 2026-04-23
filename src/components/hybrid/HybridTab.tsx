@@ -69,8 +69,6 @@ export function HybridTab() {
   const [P_em_peak, setP_em_peak] = useState(14.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
   const [em_gear, setEmGear] = useState(3.0);  // planetary gear ratio (motor shaft → wheel)
-  const T_EM_SHAFT_NM = 7.5;  // Neumotors 6530/8.5/104 peak shaft torque per motor [Nm]
-  const T_em_peak = 2 * T_EM_SHAFT_NM * em_gear;  // Nm at wheel — scales with gear ratio
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
 
@@ -122,7 +120,7 @@ export function HybridTab() {
     const result = runHybridSim({
       P_em_peak_kW: P_em_peak,
       P_em_cont_kW: P_em_cont,
-      T_em_peak_Nm: T_em_peak,
+
       em_gear,
       eta_em,
       eta_regen,
@@ -153,7 +151,7 @@ export function HybridTab() {
     setRunMs(ms);
     setHasRun(true);
   }, [
-    P_em_peak, P_em_cont, T_em_peak, em_gear, eta_em, eta_regen,
+    P_em_peak, P_em_cont, em_gear, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
     pack_series, pack_parallel, pack_Q_Ah, pack_T_celsius, soc0,
     mass, wheel_d_mm, CdA, Crr, mu, h_cg, wheelbase, f_front,
