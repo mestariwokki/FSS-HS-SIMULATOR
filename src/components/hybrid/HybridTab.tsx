@@ -68,7 +68,10 @@ export function HybridTab() {
   // T_peak/wheel = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 7 kW | P_cont = 2 × 3.5 kW
   const [P_em_peak, setP_em_peak] = useState(14.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
-  const [em_gear, setEmGear] = useState(3.0);  // planetary gear ratio (motor shaft → wheel)
+  const [em_gear, setEmGear] = useState(3.0);
+  const [kV_em, setKvEm] = useState(104);        // RPM/V per motor (Neumotors 6530/8.5/104)
+  const [I_em_peak, setIEmPeak] = useState(100); // A per motor
+  const [I_em_cont, setIEmCont] = useState(86);  // A per motor
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
 
@@ -120,7 +123,9 @@ export function HybridTab() {
     const result = runHybridSim({
       P_em_peak_kW: P_em_peak,
       P_em_cont_kW: P_em_cont,
-
+      kV_em,
+      I_em_peak_A: I_em_peak,
+      I_em_cont_A: I_em_cont,
       em_gear,
       eta_em,
       eta_regen,
@@ -151,7 +156,7 @@ export function HybridTab() {
     setRunMs(ms);
     setHasRun(true);
   }, [
-    P_em_peak, P_em_cont, em_gear, eta_em, eta_regen,
+    P_em_peak, P_em_cont, em_gear, kV_em, I_em_peak, I_em_cont, eta_em, eta_regen,
     ice_gear, bsfc, ice_start_delay, ice_rpm_min,
     pack_series, pack_parallel, pack_Q_Ah, pack_T_celsius, soc0,
     mass, wheel_d_mm, CdA, Crr, mu, h_cg, wheelbase, f_front,
@@ -273,6 +278,10 @@ export function HybridTab() {
             <ParamGroup label="P_cont" value={P_em_cont} onChange={setP_em_cont} min={0.5} max={40} step={0.5} unit="kW" infoTerm="P_cont" />
             <SHead>Drivetrain</SHead>
             <ParamGroup label="Gear ratio" value={em_gear} onChange={setEmGear} min={1.0} max={10.0} step={0.1} unit=":1" infoTerm="gear_ratio" />
+            <SHead>Motor</SHead>
+            <ParamGroup label="kV" value={kV_em} onChange={setKvEm} min={10} max={500} step={1} unit="RPM/V" />
+            <ParamGroup label="I_peak" value={I_em_peak} onChange={setIEmPeak} min={10} max={300} step={5} unit="A" />
+            <ParamGroup label="I_cont" value={I_em_cont} onChange={setIEmCont} min={10} max={200} step={5} unit="A" />
             <SHead>Efficiency</SHead>
             <ParamGroup label="η EM+ESC" value={eta_em} onChange={setEtaEm} min={0.7} max={0.99} step={0.01} unit="" infoTerm="eta_motor" />
             <ParamGroup label="η regen" value={eta_regen} onChange={setEtaRegen} min={0.5} max={0.95} step={0.01} unit="" infoTerm="eta_regen" />

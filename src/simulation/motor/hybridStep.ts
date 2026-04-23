@@ -18,6 +18,7 @@
  */
 import { interpICETorque, calcIceFuelStep } from './iceEngine';
 import { battery2RCStep, packMaxPowerW } from '../battery';
+import { kVtoKt } from './motorConstants';
 
 const ALPHA_WEIGHT = 0.12;  // filter coefficient for weight transfer, τ ≈ dt/α ≈ 0.42 s
 
@@ -27,9 +28,12 @@ export interface HybridConfig {
   // Electric motor (front axle, 2× hub motor, combined value)
   P_em_peak_kW: number;   // combined EM peak power
   P_em_cont_kW: number;   // combined EM continuous power
+  kV_em: number;          // motor kV [RPM/V] per motor — used to derive Kt
+  I_em_peak_A: number;    // peak current per motor [A]
+  I_em_cont_A: number;    // continuous current per motor [A]
   eta_em: number;         // ESC + winding efficiency (electric→mechanical)
   eta_regen: number;
-  em_gear: number;        // EM internal planetary gear (motor shaft → wheel)
+  em_gear: number;        // EM planetary gear ratio (motor shaft → wheel)
 
   // ICE (rear axle)
   ice_gear: number;       // ICE shaft → wheel gear ratio (incl. final drive)
@@ -163,12 +167,18 @@ export function hybridStep(
   const P_em_bat_limit_kW = P_bat_max_W * cfg.eta_em / 1000;
 
   // ── EM capability (front axle) ────────────────────────────────────────────
-  // Field-weakening model: T_max(ω) = min(T_peak, P_avail/ω)
+  // Field-weakening model: T_wheel = min(T_current_limit, P_avail / omega_wheel)
+  //   Low speed  → current-limited:  T = Kt × I_lim × em_gear × 2 motors × η
+  //   High speed → power-limited:    T = P_avail / omega_wheel
   const P_em_avail_kW = Math.min(
     state.boost_t < 5.0 ? cfg.P_em_peak_kW : cfg.P_em_cont_kW,
-    P_em_bat_limit_kW,   // battery limit
+    P_em_bat_limit_kW,
   );
-  const T_em_wheel_limit = P_em_avail_kW * 1000 / omega_wheel;
+  const Kt_em = kVtoKt(cfg.kV_em);
+  const I_lim = state.boost_t < 5.0 ? cfg.I_em_peak_A : cfg.I_em_cont_A;
+  const T_em_current_limit = Kt_em * I_lim * cfg.em_gear * 2 * cfg.eta_em;
+  const T_em_power_limit = P_em_avail_kW * 1000 / omega_wheel;
+  const T_em_wheel_limit = Math.min(T_em_current_limit, T_em_power_limit);
   const F_em_motor_max = T_em_wheel_limit / cfg.wheel_r_m;
   const F_em_max = Math.min(F_em_motor_max, F_em_trac_limit);
 
