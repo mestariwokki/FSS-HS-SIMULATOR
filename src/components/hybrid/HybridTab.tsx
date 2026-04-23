@@ -68,8 +68,9 @@ export function HybridTab() {
   // T_peak/wheel = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 7 kW | P_cont = 2 × 3.5 kW
   const [P_em_peak, setP_em_peak] = useState(14.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
-  const T_em_peak = 45;   // Nm at wheel — fixed value (2 × 7.5 Nm × gear 3:1)
   const [em_gear, setEmGear] = useState(3.0);  // planetary gear ratio (motor shaft → wheel)
+  const T_EM_SHAFT_NM = 7.5;  // Neumotors 6530/8.5/104 peak shaft torque per motor [Nm]
+  const T_em_peak = 2 * T_EM_SHAFT_NM * em_gear;  // Nm at wheel — scales with gear ratio
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
 
