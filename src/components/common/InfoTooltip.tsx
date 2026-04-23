@@ -68,8 +68,8 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
   // Compute clamped tooltip position
   const vpW = typeof window !== 'undefined' ? window.innerWidth : 800;
   const vpH = typeof window !== 'undefined' ? window.innerHeight : 600;
-  const TW = 284;
-  const TH = 160; // approximate
+  const TW = 320;
+  const TH = 180; // approximate
   let tipX = pos.x + 12;
   let tipY = pos.y + 12;
   if (tipX + TW > vpW - 8) tipX = pos.x - TW - 6;
@@ -101,7 +101,12 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
           background: 'var(--bg-panel)',
           border: '1px solid var(--accent-em)',
           padding: '12px 14px',
+          width: 'max-content',
+          minWidth: '200px',
           maxWidth: `${TW}px`,
+          boxSizing: 'border-box',
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
           boxShadow: '0 4px 24px rgba(0,0,0,0.8)',
           pointerEvents: 'none',
           fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
@@ -135,6 +140,7 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
               padding: '4px 8px',
               fontSize: '11px',
               color: 'var(--accent-vehicle)',
+              overflowWrap: 'break-word',
               marginBottom: def.range ? '5px' : 0,
             }}>
               {def.formula}
