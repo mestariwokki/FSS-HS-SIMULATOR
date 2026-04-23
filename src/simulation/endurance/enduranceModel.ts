@@ -66,7 +66,7 @@ export function simulateBrakeSegment(
   const v0 = v0_kmh / 3.6;
   const v1 = v1_kmh / 3.6;
   const dE_kin = 0.5 * mass_kg * (v0 * v0 - v1 * v1);
-  const E_regen_Wh = dE_kin * eta_regen / eta_esc / 3600;
+  const E_regen_Wh = dE_kin * eta_regen * eta_esc / 3600;
   const a_brake = 15;
   const dist = (v0 * v0 - v1 * v1) / (2 * a_brake);
   const t = (v0 - v1) / a_brake;
