@@ -169,15 +169,14 @@ export function MotorTab() {
 
       {/* ── Drivetrain parameters ─────────────────────────────────────────── */}
       <div style={{
-        background: '#131318',
-        border: '1px solid #1e1e2e',
-        borderRadius: '4px',
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-main)',
         padding: '20px',
         marginBottom: '20px',
       }}>
         <div style={{
-          fontSize: '11px', color: '#fff', textTransform: 'uppercase',
-          letterSpacing: '2px', borderBottom: '1px solid #2a2a3a',
+          fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase',
+          letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)',
           paddingBottom: '6px', marginBottom: '20px',
         }}>
           Drivetrain Parameters
@@ -204,13 +203,14 @@ export function MotorTab() {
           iceBsfc={iceBsfc} setIceBsfc={setIceBsfc}
           iceGear={iceGear} setIceGear={setIceGear}
           mass={mass}
+          vBatNom={vNom * series}
         />
       </div>
 
       {/* ── Battery pack + Vehicle ────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '20px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
             Battery Pack
           </div>
           <ParamGroup label="Series" value={series} onChange={setSeries} min={1} max={30} step={1} unit="s" />
@@ -223,16 +223,16 @@ export function MotorTab() {
           <ParamGroup label="Cycles" value={cycles} onChange={setCycles} min={0} max={5000} step={50} unit="" infoTerm="SoH_cap" />
         </div>
         <div>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
             Vehicle
           </div>
           <ParamGroup label="Mass" value={mass} onChange={setMass} min={100} max={600} step={5} unit="kg" />
           <ParamGroup label="CdA" value={CdA} onChange={setCdA} min={0.1} max={2.0} step={0.01} unit="m²" infoTerm="CdA" />
           <ParamGroup label="Crr" value={Crr} onChange={setCrr} min={0.005} max={0.05} step={0.001} unit="" infoTerm="Crr" />
-          <div style={{ marginTop: '10px', fontSize: '12px', color: '#ccc', lineHeight: 1.9 }}>
+          <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.9 }}>
             V_bat nom = <span style={{ color: '#ffca28' }}>{(vNom * series).toFixed(1)}</span> V<br />
             V_bat max = <span style={{ color: '#ffca28' }}>{(vMax * series).toFixed(1)}</span> V<br />
-            Capacity = <span style={{ color: '#4fc3f7' }}>{(capacity * parallel).toFixed(1)}</span> Ah
+            Capacity = <span style={{ color: 'var(--accent-em)' }}>{(capacity * parallel).toFixed(1)}</span> Ah
           </div>
         </div>
       </div>
@@ -240,7 +240,7 @@ export function MotorTab() {
       {/* ── Simulation mode ───────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '20px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
             Simulation Mode
           </div>
           <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
@@ -249,13 +249,12 @@ export function MotorTab() {
                 key={m}
                 onClick={() => setMode(m)}
                 style={{
-                  background: mode === m ? '#4fc3f7' : '#222',
-                  color: mode === m ? '#000' : '#ccc',
-                  border: '1px solid #444',
+                  background: mode === m ? 'var(--bg-active)' : 'var(--bg-input)',
+                  color: mode === m ? 'var(--accent-em)' : 'var(--text-dim)',
+                  border: `1px solid ${mode === m ? 'var(--accent-em)' : 'var(--border-main)'}`,
                   padding: '5px 12px',
                   fontSize: '12px',
                   cursor: 'pointer',
-                  fontWeight: mode === m ? 'bold' : 'normal',
                 }}
               >
                 {m === 'acc75' ? '75m Accel' : m.charAt(0).toUpperCase() + m.slice(1)}
@@ -281,15 +280,15 @@ export function MotorTab() {
 
         {mode === 'profile' && (
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
               Power Profile
             </div>
             <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ color: '#aaa', textAlign: 'left', padding: '3px' }}>Dur (s)</th>
-                  <th style={{ color: '#aaa', textAlign: 'left', padding: '3px' }}>Speed (km/h)</th>
-                  <th style={{ color: '#aaa', textAlign: 'left', padding: '3px' }}>Power (kW)</th>
+                  <th style={{ color: 'var(--text-dim)', textAlign: 'left', padding: '3px' }}>Dur (s)</th>
+                  <th style={{ color: 'var(--text-dim)', textAlign: 'left', padding: '3px' }}>Speed (km/h)</th>
+                  <th style={{ color: 'var(--text-dim)', textAlign: 'left', padding: '3px' }}>Power (kW)</th>
                   <th></th>
                 </tr>
               </thead>
@@ -298,26 +297,26 @@ export function MotorTab() {
                   <tr key={idx}>
                     <td style={{ padding: '2px' }}>
                       <input type="number" value={step.duration_s} onChange={e => updateProfileStep(idx, 'duration_s', parseFloat(e.target.value) || 0)}
-                        style={{ width: '60px', background: '#111', color: '#fff', border: '1px solid #444', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
+                        style={{ width: '60px', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
                     </td>
                     <td style={{ padding: '2px' }}>
                       <input type="number" value={step.speed_kmh} onChange={e => updateProfileStep(idx, 'speed_kmh', parseFloat(e.target.value) || 0)}
-                        style={{ width: '60px', background: '#111', color: '#fff', border: '1px solid #444', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
+                        style={{ width: '60px', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
                     </td>
                     <td style={{ padding: '2px' }}>
                       <input type="number" value={step.power_kW} onChange={e => updateProfileStep(idx, 'power_kW', parseFloat(e.target.value) || 0)}
-                        style={{ width: '60px', background: '#111', color: '#fff', border: '1px solid #444', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
+                        style={{ width: '60px', padding: '3px', fontSize: '12px', textAlign: 'right' }} />
                     </td>
                     <td style={{ padding: '2px' }}>
                       <button onClick={() => removeProfileStep(idx)}
-                        style={{ background: '#333', color: '#ef5350', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px 6px' }}>x</button>
+                        style={{ background: 'none', color: 'var(--text-faint)', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px 6px' }}>✕</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <button onClick={addProfileStep}
-              style={{ marginTop: '6px', background: '#222', color: '#4fc3f7', border: '1px solid #444', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>
+              style={{ marginTop: '6px', background: 'var(--bg-input)', color: 'var(--accent-em)', border: '1px dashed var(--border-main)', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>
               + Add Step
             </button>
           </div>
@@ -335,47 +334,73 @@ export function MotorTab() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'flex-start' }}>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
             Derived Values
           </div>
-          <div style={{ fontSize: '12px', color: '#ccc', lineHeight: 1.8 }}>
-            Kt = <span style={{ color: '#4fc3f7' }}>{Kt.toFixed(4)}</span> Nm/A<br />
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+            Kt = <span style={{ color: 'var(--accent-em)' }}>{Kt.toFixed(4)}</span> Nm/A<br />
             V_bat nom = <span style={{ color: '#ffca28' }}>{(vNom * series).toFixed(1)}</span> V<br />
-            RPM_max = <span style={{ color: '#4fc3f7' }}>{(kV * vNom * series).toFixed(0)}</span> RPM<br />
-            T_motor = <span style={{ color: '#4fc3f7' }}>{(Kt * iPeak).toFixed(2)}</span> Nm @ I_peak<br />
-            Wheel speed = <span style={{ color: '#66bb6a' }}>{((kV * vNom * series) / gear / 60 * Math.PI * wheelD / 1000 * 3.6).toFixed(1)}</span> km/h
+            RPM_max = <span style={{ color: 'var(--accent-em)' }}>{(kV * vNom * series).toFixed(0)}</span> RPM<br />
+            T_motor = <span style={{ color: 'var(--accent-em)' }}>{(Kt * iPeak).toFixed(2)}</span> Nm @ I_peak<br />
+            Wheel speed = <span style={{ color: 'var(--accent-vehicle)' }}>{((kV * vNom * series) / gear / 60 * Math.PI * wheelD / 1000 * 3.6).toFixed(1)}</span> km/h
           </div>
         </div>
       </div>
 
-      {/* ── Control buttons ───────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '14px' }}>
-        <button
-          onClick={handleStart}
-          disabled={sim.running}
-          style={{
-            background: '#66bb6a', color: '#000', border: 'none',
-            padding: '8px 20px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
-            opacity: sim.running ? 0.4 : 1,
-          }}
-        >
-          {mode === 'acc75' ? 'Run 75m' : 'Start'}
-        </button>
-        <button
-          onClick={sim.reset}
-          style={{ background: '#333', color: '#fff', border: '1px solid #444', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
-        >
-          Reset
-        </button>
-        {sim.data.length > 0 && (
+      {/* ── Run / Reset bar ───────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: 'var(--bg-root)', border: '1px solid var(--border-main)',
+        padding: '9px 14px', marginBottom: '14px',
+      }}>
+        {!sim.running ? (
           <button
-            onClick={() => exportMotorCSV(sim.data)}
-            style={{ background: '#222', color: '#4fc3f7', border: '1px solid #444', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
+            id="btn-motor-run"
+            onClick={handleStart}
+            style={{
+              background: 'var(--bg-active)', color: 'var(--accent-vehicle)', border: '1px solid var(--accent-vehicle)',
+              padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
+            }}
           >
-            Export CSV
+            ▶ {mode === 'acc75' ? 'RUN 75M' : 'START'}
+          </button>
+        ) : (
+          <button
+            id="btn-motor-pause"
+            onClick={sim.pause}
+            style={{
+              background: 'var(--bg-active)', color: '#ffca28', border: '1px solid #ffca28',
+              padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
+            }}
+          >
+            {sim.paused ? '▶ RESUME' : '⏸ PAUSE'}
           </button>
         )}
-        <span style={{ fontSize: '12px', color: '#888', marginLeft: '8px' }}>{sim.status}</span>
+        <button
+          id="btn-motor-reset"
+          onClick={sim.reset}
+          style={{
+            background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border-bright)',
+            padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px',
+          }}
+        >
+          ↺ RESET
+        </button>
+        <button
+          id="btn-motor-csv"
+          onClick={() => exportMotorCSV(sim.data)}
+          disabled={sim.data.length === 0}
+          style={{
+            background: 'var(--bg-panel)', color: 'var(--accent-em)', border: '1px solid var(--accent-em)',
+            padding: '6px 18px', fontSize: '12px', cursor: 'pointer',
+            marginLeft: '6px', letterSpacing: '1px',
+          }}
+        >
+          ↓ CSV
+        </button>
+        <span id="motor-status" style={{ color: 'var(--text-dim)', fontSize: '12px', marginLeft: '8px' }}>
+          {sim.status}
+        </span>
       </div>
 
       {/* ── 75m result ────────────────────────────────────────────────────── */}
@@ -387,7 +412,7 @@ export function MotorTab() {
       {/* ── Charts ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Power (kW)</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Power (kW)</div>
           <LineChart
             data={sim.data as unknown as Record<string, number>[]}
             series={[
@@ -400,7 +425,7 @@ export function MotorTab() {
           />
         </div>
         <div>
-          <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Current & Voltage</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Current & Voltage</div>
           <LineChart
             data={sim.data as unknown as Record<string, number>[]}
             series={[
@@ -416,7 +441,7 @@ export function MotorTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Speed & SOC</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Speed & SOC</div>
           <LineChart
             data={sim.data as unknown as Record<string, number>[]}
             series={[
@@ -429,7 +454,7 @@ export function MotorTab() {
           />
         </div>
         <div>
-          <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Temperature</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Temperature</div>
           <LineChart
             data={sim.data as unknown as Record<string, number>[]}
             series={[
@@ -446,7 +471,7 @@ export function MotorTab() {
       {mode === 'acc75' && sim.data.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Distance (m)</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Distance (m)</div>
             <LineChart
               data={sim.data as unknown as Record<string, number>[]}
               series={[{ key: 'x_m', color: '#ce93d8', label: 'x' }]}
@@ -457,7 +482,7 @@ export function MotorTab() {
             />
           </div>
           <div>
-            <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Traction Ratio</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Traction Ratio</div>
             <LineChart
               data={sim.data as unknown as Record<string, number>[]}
               series={[{ key: 'trac_ratio', color: '#ffca28', label: 'Traction' }]}
@@ -473,7 +498,7 @@ export function MotorTab() {
 
       {/* ── Efficiency map ────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '8px' }}>
+        <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '8px' }}>
           Efficiency Map
         </div>
         <EfficiencyMap mc={motorConfig} pack={pack} lastPoint={lastPoint} />

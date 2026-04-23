@@ -14,7 +14,7 @@ function Alert({ on, label, type }: { on: boolean; label: string; type: 'ov' | '
     oc: { color: '#ffca28', border: '#555010', bg: '#1e1c10' },
     hot: { color: '#ffa726', border: '#553010', bg: '#1e1508' },
   };
-  const c = on ? colors[type] : { color: '#444', border: '#2a2a2a', bg: '#161616' };
+  const c = on ? colors[type] : { color: '#3a3a50', border: '#1a1a24', bg: '#0d0d14' };
 
   return (
     <div style={{

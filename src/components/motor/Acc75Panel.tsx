@@ -18,7 +18,7 @@ interface Acc75PanelProps {
 export function Acc75Panel(props: Acc75PanelProps) {
   return (
     <div>
-      <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
         75 m Accel Parameters
       </div>
       <ParamGroup label="Mass (accel)" value={props.massAcc} onChange={props.setMassAcc} min={100} max={600} step={5} unit="kg" />

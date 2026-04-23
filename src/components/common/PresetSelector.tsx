@@ -12,18 +12,13 @@ export function PresetSelector({ presets, selectedId, onSelect }: PresetSelector
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '7px' }}>
-      <label style={{ color: '#fff', fontSize: '12px', whiteSpace: 'nowrap', minWidth: '110px' }}>
+      <label style={{ color: 'var(--text-secondary)', fontSize: '12px', whiteSpace: 'nowrap', minWidth: '110px' }}>
         Selection
       </label>
       <select
         value={selectedId}
         onChange={e => onSelect(e.target.value)}
         style={{
-          background: '#111',
-          color: '#fff',
-          border: '1px solid #444',
-          padding: '5px 8px',
-          fontFamily: "'Courier New', monospace",
           fontSize: '11px',
           flex: 1,
           minWidth: 0,

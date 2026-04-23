@@ -140,14 +140,14 @@ export function BatteryTab() {
   return (
     <div>
       {/* Control Panel */}
-      <div style={{ background: '#0f0f14', border: '1px solid #26262e', borderRadius: '4px', padding: '4px', marginBottom: '16px' }}>
-        <div style={{ background: '#111116', border: '1px solid #2d2d36', padding: '12px 14px' }}>
-          <div style={{ fontSize: '10px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '6px', marginBottom: '10px' }}>
+      <div style={{ background: 'var(--bg-root)', border: '1px solid var(--border-dim)', borderRadius: '4px', padding: '4px', marginBottom: '16px' }}>
+        <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-main)', padding: '12px 14px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '6px', marginBottom: '10px' }}>
             HSC Configuration
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
             {/* Cell + Pack columns from PackConfigPanel */}
-            <div style={{ paddingRight: '18px', borderRight: '1px solid #222' }}>
+            <div style={{ paddingRight: '18px', borderRight: '1px solid var(--border-dim)' }}>
               <PackConfigPanel
                 series={series} parallel={parallel} capacity={capacity}
                 vMax={vMax} vNom={vNom} vMin={vMin}
@@ -185,27 +185,27 @@ export function BatteryTab() {
         {/* Run Bar */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px',
-          background: '#0f0f14', border: '1px solid #2d2d38', padding: '10px 14px', marginTop: '4px',
+          background: 'var(--bg-root)', border: '1px solid var(--border-main)', padding: '9px 14px', marginTop: '4px',
         }}>
           {!sim.running ? (
-            <button onClick={handleStart} style={{ background: '#1a1a1a', color: '#4caf50', border: '1px solid #4caf50', padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer' }}>
-              START
+            <button onClick={handleStart} style={{ background: 'var(--bg-active)', color: 'var(--accent-vehicle)', border: '1px solid var(--accent-vehicle)', padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px' }}>
+              ▶ START
             </button>
           ) : (
-            <button onClick={sim.pause} style={{ background: '#1a1a1a', color: '#ffca28', border: '1px solid #ffca28', padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer' }}>
-              {sim.paused ? 'RESUME' : 'PAUSE'}
+            <button onClick={sim.pause} style={{ background: 'var(--bg-active)', color: '#ffca28', border: '1px solid #ffca28', padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px' }}>
+              {sim.paused ? '▶ RESUME' : '⏸ PAUSE'}
             </button>
           )}
-          <button onClick={sim.reset} style={{ background: '#1a1a1a', color: '#ddd', border: '1px solid #555', padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer' }}>
-            RESET
+          <button onClick={sim.reset} style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)', border: '1px solid var(--border-bright)', padding: '6px 18px', fontSize: '12px', cursor: 'pointer', letterSpacing: '1px' }}>
+            ↺ RESET
           </button>
           <button
             onClick={() => exportBatteryCSV(sim.data, mode, cycles)}
-            style={{ background: '#1a1a1a', color: '#4db6ac', border: '1px solid #4db6ac', padding: '7px 18px', fontFamily: "'Courier New', monospace", fontSize: '13px', cursor: 'pointer', marginLeft: '8px' }}
+            style={{ background: 'var(--bg-panel)', color: 'var(--accent-em)', border: '1px solid var(--accent-em)', padding: '6px 18px', fontSize: '12px', cursor: 'pointer', marginLeft: '6px', letterSpacing: '1px' }}
           >
-            CSV
+            ↓ CSV
           </button>
-          <span style={{ color: '#ccc', fontSize: '12px', marginLeft: '8px' }}>{sim.status}</span>
+          <span style={{ color: 'var(--text-dim)', fontSize: '12px', marginLeft: '8px' }}>{sim.status}</span>
         </div>
       </div>
 
@@ -222,10 +222,10 @@ export function BatteryTab() {
         {/* Right: Charts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
               Voltage vs Time
             </div>
-            <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-main)', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
@@ -244,10 +244,10 @@ export function BatteryTab() {
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
               SOC & Ah vs Time
             </div>
-            <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-main)', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
@@ -264,10 +264,10 @@ export function BatteryTab() {
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
               Butler-Volmer Overpotential [mV]
             </div>
-            <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-main)', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
@@ -284,10 +284,10 @@ export function BatteryTab() {
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
               Cell Temperature [°C]
             </div>
-            <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-main)', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
@@ -302,10 +302,10 @@ export function BatteryTab() {
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
               Pack Power [kW]
             </div>
-            <div style={{ border: '1px solid #2a2a35', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-main)', overflow: 'hidden' }}>
               <LineChart
                 data={chartData}
                 series={[
@@ -332,7 +332,7 @@ export function BatteryTab() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
         {/* Summary */}
         <div>
-          <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
             Summary
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -364,8 +364,8 @@ export function BatteryTab() {
 function SummaryRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <tr>
-      <td style={{ padding: '4px 8px', borderBottom: '1px solid #1a1a1a' }}>{label}</td>
-      <td style={{ textAlign: 'right', padding: '4px 8px', borderBottom: '1px solid #1a1a1a', color: color ?? '#ddd' }}>{value}</td>
+      <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--border-dim)', color: 'var(--text-secondary)' }}>{label}</td>
+      <td style={{ textAlign: 'right', padding: '4px 8px', borderBottom: '1px solid var(--border-dim)', color: color ?? 'var(--text-primary)' }}>{value}</td>
     </tr>
   );
 }

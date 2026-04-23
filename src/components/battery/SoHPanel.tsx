@@ -15,8 +15,8 @@ interface SoHPanelProps {
 
 export function SoHPanel(props: SoHPanelProps) {
   return (
-    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #1e1e1e' }}>
-      <div style={{ fontSize: '9px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
+    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-dim)' }}>
+      <div style={{ fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
         Aging (SoH) -- 2RC ECM
       </div>
       <ParamGroup label="Cycles N" value={props.cycles} onChange={props.onCyclesChange} min={0} max={3000} step={10} unit="cycles" />

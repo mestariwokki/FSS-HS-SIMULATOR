@@ -111,11 +111,11 @@ export function LineChart({
     const cw = W - PAD.l - PAD.r;
     const ch = height - PAD.t - PAD.b;
 
-    ctx.fillStyle = '#1c1c22';
+    ctx.fillStyle = '#0d0d14';
     ctx.fillRect(0, 0, W, height);
 
     // Grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) {
       const y = PAD.t + i * ch / 4;
@@ -123,8 +123,8 @@ export function LineChart({
     }
 
     if (!displayData || displayData.length < 2) {
-      ctx.fillStyle = '#333';
-      ctx.font = '11px Courier New';
+      ctx.fillStyle = '#3a3a50';
+      ctx.font = '11px IBM Plex Mono, Courier New';
       ctx.textAlign = 'center';
       ctx.fillText('Start simulation', W / 2, height / 2 + 4);
       return;
@@ -175,8 +175,8 @@ export function LineChart({
     }
 
     // Y-axis labels
-    ctx.fillStyle = '#555';
-    ctx.font = '10px Courier New';
+    ctx.fillStyle = '#666678';
+    ctx.font = '10px IBM Plex Mono, Courier New';
     ctx.textAlign = 'right';
     for (let i = 0; i <= 4; i++) {
       const v = yMax - yRange * i / 4;
@@ -206,7 +206,7 @@ export function LineChart({
         if (dotY < PAD.t - 4 || dotY > PAD.t + ch + 4) continue;
         ctx.save();
         ctx.fillStyle = s.color;
-        ctx.strokeStyle = '#111';
+        ctx.strokeStyle = '#0d0d14';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(hoverX, dotY, 4, 0, Math.PI * 2);
@@ -290,8 +290,8 @@ export function LineChart({
           position: 'fixed',
           left: tx,
           top: ty,
-          background: 'rgba(18,18,24,0.96)',
-          border: '1px solid #333',
+          background: 'rgba(8,8,16,0.97)',
+          border: '1px solid #252534',
           borderRadius: '4px',
           padding: '6px 10px',
           fontSize: '11px',
@@ -303,7 +303,7 @@ export function LineChart({
           {tooltipRows.map((row, i) => (
             <div key={i} style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', marginBottom: i < tooltipRows.length - 1 ? '2px' : 0 }}>
               <span style={{ color: row.color }}>{row.label}</span>
-              <span style={{ color: '#ddd' }}>{row.value}</span>
+              <span style={{ color: '#aaaabc' }}>{row.value}</span>
             </div>
           ))}
         </div>

@@ -15,27 +15,28 @@ function App() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0e0e14',
-      color: '#ddd',
+      background: 'var(--bg-root)',
+      color: 'var(--text-secondary)',
       fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
     }}>
       {/* Header */}
       <div style={{
-        borderBottom: '1px solid #222',
-        padding: '12px 24px',
+        borderBottom: '1px solid var(--border-dim)',
+        padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        background: 'var(--bg-panel)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-          <span style={{ fontSize: '15px', color: '#fff', fontWeight: 'bold', letterSpacing: '1px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 'bold', letterSpacing: '2px' }}>
             FSS-HS-SIM
           </span>
-          <span style={{ fontSize: '11px', color: '#555' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-dim)', letterSpacing: '0.5px' }}>
             Formula Student Battery + Motor + Endurance Simulator
           </span>
         </div>
-        <span style={{ fontSize: '10px', color: '#444' }}>rev 0.2</span>
+        <span style={{ fontSize: '10px', color: 'var(--text-faint)', letterSpacing: '1px' }}>rev 0.2</span>
       </div>
 
       {/* Navigation */}

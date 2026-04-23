@@ -68,8 +68,8 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
   // Compute clamped tooltip position
   const vpW = typeof window !== 'undefined' ? window.innerWidth : 800;
   const vpH = typeof window !== 'undefined' ? window.innerHeight : 600;
-  const TW = 284;
-  const TH = 160; // approximate
+  const TW = 320;
+  const TH = 180; // approximate
   let tipX = pos.x + 12;
   let tipY = pos.y + 12;
   if (tipX + TW > vpW - 8) tipX = pos.x - TW - 6;
@@ -85,8 +85,8 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
       style={{ position: 'relative', cursor: 'help', display: 'inline' }}
     >
       <span style={{
-        color: '#fff',
-        borderBottom: def ? '1px dashed #4fc3f7' : undefined,
+        color: 'var(--text-secondary)',
+        borderBottom: def ? '1px dashed var(--accent-em)' : undefined,
         textDecoration: 'none',
       }}>
         {children ?? displayLabel}
@@ -98,12 +98,16 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
           left: tipX,
           top: tipY,
           zIndex: 10000,
-          background: '#1a1a2e',
-          border: '1px solid #4fc3f7',
-          borderRadius: '4px',
+          background: 'var(--bg-panel)',
+          border: '1px solid var(--accent-em)',
           padding: '12px 14px',
+          width: 'max-content',
+          minWidth: '200px',
           maxWidth: `${TW}px`,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.7)',
+          boxSizing: 'border-box',
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.8)',
           pointerEvents: 'none',
           fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
         }}>
@@ -116,35 +120,35 @@ export function InfoTooltip({ term, label, delay = 1000, children }: InfoTooltip
             height: 0,
             borderLeft: '6px solid transparent',
             borderRight: '6px solid transparent',
-            borderBottom: '7px solid #4fc3f7',
+            borderBottom: '7px solid var(--accent-em)',
           }} />
           {/* Header */}
           <div style={{ marginBottom: '6px' }}>
-            <span style={{ color: '#4fc3f7', fontSize: '13px', fontWeight: 'bold' }}>{def.abbr}</span>
-            <span style={{ color: '#aaa', fontSize: '11px', marginLeft: '6px' }}>{def.unit && `[${def.unit}]`}</span>
+            <span style={{ color: 'var(--accent-em)', fontSize: '13px', fontWeight: 'bold' }}>{def.abbr}</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: '11px', marginLeft: '6px' }}>{def.unit && `[${def.unit}]`}</span>
           </div>
-          <div style={{ color: '#ddd', fontSize: '11px', fontStyle: 'italic', marginBottom: '6px', lineHeight: 1.4 }}>
+          <div style={{ color: 'var(--text-primary)', fontSize: '11px', fontStyle: 'italic', marginBottom: '6px', lineHeight: 1.4 }}>
             {def.name}
           </div>
-          <div style={{ color: '#bbb', fontSize: '11px', lineHeight: 1.5, marginBottom: def.formula ? '6px' : 0 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.5, marginBottom: def.formula ? '6px' : 0 }}>
             {def.description}
           </div>
           {def.formula && (
             <div style={{
-              background: '#111',
-              border: '1px solid #333',
+              background: 'var(--bg-root)',
+              border: '1px solid var(--border-main)',
               padding: '4px 8px',
               fontSize: '11px',
-              color: '#66bb6a',
+              color: 'var(--accent-vehicle)',
+              overflowWrap: 'break-word',
               marginBottom: def.range ? '5px' : 0,
-              borderRadius: '2px',
             }}>
               {def.formula}
             </div>
           )}
           {def.range && (
-            <div style={{ color: '#888', fontSize: '10px', marginTop: '4px' }}>
-              Tyypillinen arvo: {def.range}
+            <div style={{ color: 'var(--text-dim)', fontSize: '10px', marginTop: '4px' }}>
+              Typical: {def.range}
             </div>
           )}
         </div>

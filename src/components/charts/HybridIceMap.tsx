@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ICE_TORQUE_CURVE, interpICETorque } from '../../simulation/motor/iceEngine';
 
-/** ICE-spesifinen värikartta — sopii 15–40 % hyötysuhteille */
+/** ICE-specific colour map — suited for 15–40 % efficiency range */
 function iceEtaColor(eta: number): string {
   eta = Math.max(0, Math.min(1, eta));
   if (eta < 0.15) return 'rgba(30,10,10,0.98)';
@@ -135,7 +135,7 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
       { color: '#66bb6a', text: 'η ≥ 35%' },
       { color: '#ffca28', text: 'η 25–35%' },
       { color: '#ef5350', text: 'η < 25%' },
-      { color: 'rgba(255,255,255,0.12)', text: 'Raja ylitetty' },
+      { color: 'rgba(255,255,255,0.12)', text: 'Above curve' },
     ];
     const lx = PL + cw - 68, ly = PT + 6;
     ctx.fillStyle = 'rgba(0,0,0,0.62)';
@@ -166,7 +166,7 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
     <canvas
       ref={ref}
       height={180}
-      style={{ display: 'block', width: '100%', background: '#111', border: '1px solid #1e1e1e' }}
+      style={{ display: 'block', width: '100%', background: '#0d0d14', border: '1px solid #1a1a24' }}
     />
   );
 }

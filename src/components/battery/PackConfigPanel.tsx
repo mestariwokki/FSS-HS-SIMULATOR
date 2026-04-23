@@ -48,8 +48,8 @@ export function PackConfigPanel({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
       {/* Cell column */}
-      <div style={{ paddingRight: '18px', borderRight: '1px solid #222' }}>
-        <div style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid #2a2a2a' }}>
+      <div style={{ paddingRight: '18px', borderRight: '1px solid var(--border-dim)' }}>
+        <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid var(--border-dim)' }}>
           Cell
         </div>
         <PresetSelector presets={presets} selectedId={selectedPresetId} onSelect={onPresetSelect} />
@@ -57,26 +57,24 @@ export function PackConfigPanel({
         <ParamGroup label="V max" value={vMax} onChange={v => onChange('vMax', v)} min={3.0} max={5.0} step={0.01} unit="V" infoTerm="V_batt" />
         <ParamGroup label="V nom" value={vNom} onChange={v => onChange('vNom', v)} min={2.5} max={4.5} step={0.01} unit="V" />
         <ParamGroup label="V min" value={vMin} onChange={v => onChange('vMin', v)} min={2.0} max={4.0} step={0.01} unit="V" />
-        <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #2a2a2a' }}>
+        <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--border-dim)' }}>
           <input
             type="text"
             value={presetName}
             onChange={e => setPresetName(e.target.value)}
             placeholder="Save as..."
             style={{
-              flex: 1, minWidth: 0, background: '#111', color: '#fff',
-              border: '1px solid #444', padding: '4px 8px',
-              fontFamily: "'Courier New', monospace", fontSize: '11px',
+              flex: 1, minWidth: 0, fontSize: '11px',
             }}
           />
-          <button onClick={handleSave} style={{ padding: '4px 10px', fontSize: '11px', borderColor: '#4fc3f7', color: '#4fc3f7', background: '#1a1a1a', border: '1px solid #4fc3f7', cursor: 'pointer', fontFamily: "'Courier New', monospace" }}>+ SAVE</button>
-          <button onClick={() => onDeletePreset(selectedPresetId)} style={{ padding: '4px 10px', fontSize: '11px', borderColor: '#ef5350', color: '#ef5350', background: '#1a1a1a', border: '1px solid #ef5350', cursor: 'pointer', fontFamily: "'Courier New', monospace" }}>x</button>
+          <button onClick={handleSave} style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--accent-em)', background: 'var(--bg-panel)', border: '1px solid var(--accent-em)', cursor: 'pointer' }}>+ SAVE</button>
+          <button onClick={() => onDeletePreset(selectedPresetId)} style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--accent-alert)', background: 'var(--bg-panel)', border: '1px solid var(--accent-alert)', cursor: 'pointer' }}>✕</button>
         </div>
       </div>
 
       {/* Pack column */}
-      <div style={{ padding: '0 18px', borderRight: '1px solid #222' }}>
-        <div style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid #2a2a2a' }}>
+      <div style={{ padding: '0 18px', borderRight: '1px solid var(--border-dim)' }}>
+        <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid var(--border-dim)' }}>
           Pack
         </div>
         <ParamGroup label="Series (S)" value={series} onChange={v => onChange('series', v)} min={1} max={40} step={1} unit="cells" infoTerm="V_batt" />
@@ -84,11 +82,11 @@ export function PackConfigPanel({
         <ParamGroup label="Resistance" value={resistance} onChange={v => onChange('resistance', v)} min={1} max={500} step={1} unit="mOhm" />
         <ParamGroup label="Thermal mass" value={thermalMass} onChange={v => onChange('thermalMass', v)} min={10} max={20000} step={100} unit="J/K" />
         <ParamGroup label="Cooling hA" value={coolingUA} onChange={v => onChange('coolingUA', v)} min={0} max={500} step={1} unit="W/K" />
-        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #2a2a2a', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px' }}>
-          <div><span style={{ fontSize: '10px', color: '#bbb' }}>V max pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: '#4fc3f7' }}>{(vMax * series).toFixed(2)} V</div></div>
-          <div><span style={{ fontSize: '10px', color: '#bbb' }}>V nom pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff' }}>{(vNom * series).toFixed(2)} V</div></div>
-          <div><span style={{ fontSize: '10px', color: '#bbb' }}>V min pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: '#ef5350' }}>{(vMin * series).toFixed(2)} V</div></div>
-          <div><span style={{ fontSize: '10px', color: '#bbb' }}>Capacity</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: '#66bb6a' }}>{(capacity * parallel).toFixed(1)} Ah</div></div>
+        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-dim)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px' }}>
+          <div><span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>V max pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-em)' }}>{(vMax * series).toFixed(2)} V</div></div>
+          <div><span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>V nom pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{(vNom * series).toFixed(2)} V</div></div>
+          <div><span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>V min pack</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-alert)' }}>{(vMin * series).toFixed(2)} V</div></div>
+          <div><span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Capacity</span><div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-vehicle)' }}>{(capacity * parallel).toFixed(1)} Ah</div></div>
         </div>
       </div>
 

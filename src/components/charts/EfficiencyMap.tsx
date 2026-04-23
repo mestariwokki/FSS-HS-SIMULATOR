@@ -218,7 +218,7 @@ export function EfficiencyMap({ mc, pack, lastPoint, hoverPx }: EfficiencyMapPro
     <canvas
       ref={canvasRef}
       height={280}
-      style={{ display: 'block', width: '100%', cursor: 'crosshair', background: '#111', border: '1px solid #1e1e1e' }}
+      style={{ display: 'block', width: '100%', cursor: 'crosshair', background: '#0d0d14', border: '1px solid #1a1a24' }}
     />
   );
 }

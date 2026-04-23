@@ -30,16 +30,16 @@ export function MotorSummaryTable({ data, stats }: MotorSummaryTableProps) {
 
   return (
     <div style={{ marginTop: '16px' }}>
-      <div style={{ fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '8px' }}>
+      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '8px' }}>
         Summary
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
         <tbody>
           {rows.map(([label, value, unit]) => (
             <tr key={label}>
-              <td style={{ color: '#ddd', padding: '3px 8px', borderBottom: '1px solid #1a1a1a' }}>{label}</td>
-              <td style={{ textAlign: 'right', color: '#4fc3f7', padding: '3px 8px', borderBottom: '1px solid #1a1a1a' }}>{value}</td>
-              <td style={{ color: '#888', padding: '3px 8px', borderBottom: '1px solid #1a1a1a', fontSize: '11px' }}>{unit}</td>
+              <td style={{ color: 'var(--text-secondary)', padding: '3px 8px', borderBottom: '1px solid var(--border-dim)' }}>{label}</td>
+              <td style={{ textAlign: 'right', color: 'var(--accent-em)', padding: '3px 8px', borderBottom: '1px solid var(--border-dim)' }}>{value}</td>
+              <td style={{ color: 'var(--text-dim)', padding: '3px 8px', borderBottom: '1px solid var(--border-dim)', fontSize: '11px' }}>{unit}</td>
             </tr>
           ))}
         </tbody>
