@@ -17,7 +17,7 @@ export const DEFAULT_MOTOR = {
   eta_c: 0.96,
   eta_regen: 0.85,
   gear: 3.0,
-  wheel_d_mm: 400,
+  wheel_d_mm: 412,
   P_cont: 3.5,
   P_peak: 5.0,
   I_cont: 86,

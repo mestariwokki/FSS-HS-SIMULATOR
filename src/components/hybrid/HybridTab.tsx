@@ -91,7 +91,7 @@ export function HybridTab() {
 
   // ── Vehicle — M06H reference data (Ajotilapiirros_Drive_diagram_FSOM06H_2026.xlsx) ──
   const [mass, setMass] = useState(285);          // kg, incl. driver (210+75)
-  const [wheel_d_mm, setWheelD] = useState(398);  // mm, dynamic rolling diameter 16x7.5-10
+  const [wheel_d_mm, setWheelD] = useState(412);  // mm, dynamic rolling diameter 16x7.5-10
   const [CdA, setCdA] = useState(0.98);         // m², A=1.225 × cA=0.80
   const [Crr, setCrr] = useState(0.018);        // rolling resistance coefficient
   const [mu, setMu] = useState(1.60);           // friction coefficient (slick, dry)
