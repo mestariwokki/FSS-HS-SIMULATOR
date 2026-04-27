@@ -11,6 +11,8 @@ export interface EffMapHoverInfo {
   inBounds: boolean;
   cx: number;
   cy: number;
+  mouseX: number;
+  mouseY: number;
 }
 
 export function useEffMapHover(mc: MotorConfig | null, pack: PackConfig | null) {
@@ -58,6 +60,8 @@ export function useEffMapHover(mc: MotorConfig | null, pack: PackConfig | null) 
     setHoverInfo({
       rpm, torque_Nm: T_mot, eta, P_mech_kW: Pm / 1000, I_motor_A: Im,
       inBounds, cx, cy,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
     });
   }, [mc, pack]);
 

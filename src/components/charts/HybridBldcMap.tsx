@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { etaColor } from '../../simulation/motor/efficiencyMap';
 
 interface Props {
@@ -21,17 +21,30 @@ const ETA_ESC = 0.97;                         // ESC efficiency
 const RPM_MAX = KV * V_NOM;
 const T_MAX   = KT * I_PK;
 
+interface HoverState {
+  mouseX: number;
+  mouseY: number;
+  rpm: number;
+  torque: number;
+  eta: number;
+  inBounds: boolean;
+}
+
 export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [hover, setHover] = useState<HoverState | null>(null);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const W = canvas.offsetWidth || 300;
     const H = 180;
-    canvas.width = W; canvas.height = H;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.scale(dpr, dpr);
 
     const PL = 42, PR = 8, PT = 10, PB = 32;
     const cw = W - PL - PR, ch = H - PT - PB;
@@ -103,7 +116,7 @@ export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }
       { color: '#66bb6a', text: 'η ≥ 85%' },
       { color: '#ffca28', text: 'η 70–85%' },
       { color: '#ef5350', text: 'η < 70%' },
-      { color: 'rgba(255,255,255,0.12)', text: 'Raja ylitetty' },
+      { color: 'rgba(255,255,255,0.12)', text: 'Limit exceeded' },
     ];
     const lx = PL + cw - 68, ly = PT + 6;
     ctx.fillStyle = 'rgba(0,0,0,0.62)';
@@ -130,11 +143,78 @@ export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }
     }
   }, [label, labelColor, opRpm, opTorque]);
 
+  const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+
+    const PL = 42, PR = 8, PT = 10, PB = 32;
+    const cw = rect.width - PL - PR;
+    const ch = rect.height - PT - PB;
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    if (cx < PL || cx > PL + cw || cy < PT || cy > PT + ch) {
+      setHover(null);
+      return;
+    }
+
+    const rpm    = ((cx - PL) / cw) * RPM_MAX;
+    const T_m    = (1 - (cy - PT) / ch) * T_MAX;
+    const omega  = rpm * 2 * Math.PI / 60;
+    const V_bemf = omega / KV_R;
+    const I_m    = T_m / KT;
+    const inBounds = I_m <= I_PK && V_bemf + I_m * R_W <= V_MAX && V_bemf <= V_NOM;
+    const P_mech = T_m * omega;
+    const P_elec = (V_bemf * I_m + I_m * I_m * R_W) / ETA_ESC;
+    const eta    = inBounds && P_elec > 0.5 ? Math.min(1, P_mech / P_elec) : 0;
+
+    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_m, eta, inBounds });
+  }, []);
+
+  const onMouseLeave = useCallback(() => setHover(null), []);
+
   return (
-    <canvas
-      ref={ref}
-      height={180}
-      style={{ display: 'block', width: '100%', background: '#0d0d14', border: '1px solid #1a1a24' }}
-    />
+    <div style={{ position: 'relative' }}>
+      <canvas
+        ref={ref}
+        height={180}
+        style={{ display: 'block', width: '100%', background: '#0d0d14',
+                 border: '1px solid #1a1a24', cursor: 'crosshair' }}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+      />
+      {hover && (
+        <div style={{
+          position: 'fixed',
+          left: hover.mouseX + 14,
+          top: hover.mouseY - 10,
+          pointerEvents: 'none',
+          background: 'rgba(8,8,8,0.95)',
+          border: '1px solid #444',
+          padding: '7px 11px',
+          fontSize: '11px',
+          fontFamily: "'Courier New', monospace",
+          color: '#fff',
+          whiteSpace: 'nowrap',
+          zIndex: 999,
+          lineHeight: 1.9,
+        }}>
+          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '1px', marginBottom: 2 }}>
+            {label}
+          </div>
+          {[
+            { label: 'RPM',    value: hover.rpm.toFixed(0) },
+            { label: 'Torque', value: hover.torque.toFixed(2) + ' Nm' },
+            { label: 'η',      value: hover.inBounds ? (hover.eta * 100).toFixed(1) + '%' : 'out of range' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+              <span style={{ color: '#aaa' }}>{label}</span>
+              <span>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

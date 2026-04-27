@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { ICE_TORQUE_CURVE, interpICETorque } from '../../simulation/motor/iceEngine';
 
 /** ICE-specific colour map — suited for 15–40 % efficiency range */
@@ -38,17 +38,30 @@ function bsfcAt(rpm: number, load_frac: number, bsfc_min: number): number {
   return bsfc_min * Math.exp(0.35 * dRpm * dRpm + 0.90 * dLoad * dLoad);
 }
 
+interface HoverState {
+  mouseX: number;
+  mouseY: number;
+  rpm: number;
+  torque: number;
+  eta: number;
+  inBounds: boolean;
+}
+
 export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [hover, setHover] = useState<HoverState | null>(null);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const W = canvas.offsetWidth || 300;
     const H = 180;
-    canvas.width = W; canvas.height = H;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.scale(dpr, dpr);
 
     const PL = 42, PR = 8, PT = 10, PB = 32;
     const cw = W - PL - PR, ch = H - PT - PB;
@@ -162,11 +175,76 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
     }
   }, [bsfc_gkWh, opRpm, opTorque]);
 
+  const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+
+    const PL = 42, PR = 8, PT = 10, PB = 32;
+    const cw = rect.width - PL - PR;
+    const ch = rect.height - PT - PB;
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    if (cx < PL || cx > PL + cw || cy < PT || cy > PT + ch) {
+      setHover(null);
+      return;
+    }
+
+    const rpm     = RPM_MIN + ((cx - PL) / cw) * (RPM_MAX - RPM_MIN);
+    const T_nm    = (1 - (cy - PT) / ch) * T_MAX_ICE;
+    const T_curve = interpICETorque(rpm);
+    const inBounds = T_nm <= T_curve && T_curve > 0;
+    const load_frac = inBounds ? T_nm / T_curve : 0;
+    const bsfc_pt   = inBounds ? bsfcAt(rpm, load_frac, bsfc_gkWh) : 0;
+    const eta       = inBounds ? Math.min(1, 1000 / (bsfc_pt * HHV)) : 0;
+
+    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_nm, eta, inBounds });
+  }, [bsfc_gkWh]);
+
+  const onMouseLeave = useCallback(() => setHover(null), []);
+
   return (
-    <canvas
-      ref={ref}
-      height={180}
-      style={{ display: 'block', width: '100%', background: '#0d0d14', border: '1px solid #1a1a24' }}
-    />
+    <div style={{ position: 'relative' }}>
+      <canvas
+        ref={ref}
+        height={180}
+        style={{ display: 'block', width: '100%', background: '#0d0d14',
+                 border: '1px solid #1a1a24', cursor: 'crosshair' }}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+      />
+      {hover && (
+        <div style={{
+          position: 'fixed',
+          left: hover.mouseX + 14,
+          top: hover.mouseY - 10,
+          pointerEvents: 'none',
+          background: 'rgba(8,8,8,0.95)',
+          border: '1px solid #444',
+          padding: '7px 11px',
+          fontSize: '11px',
+          fontFamily: "'Courier New', monospace",
+          color: '#fff',
+          whiteSpace: 'nowrap',
+          zIndex: 999,
+          lineHeight: 1.9,
+        }}>
+          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '1px', marginBottom: 2 }}>
+            ICE
+          </div>
+          {[
+            { label: 'RPM',    value: hover.rpm.toFixed(0) },
+            { label: 'Torque', value: hover.torque.toFixed(1) + ' Nm' },
+            { label: 'η',      value: hover.inBounds ? (hover.eta * 100).toFixed(1) + '%' : 'out of range' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+              <span style={{ color: '#aaa' }}>{label}</span>
+              <span>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
