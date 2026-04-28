@@ -261,8 +261,10 @@ export function EfficiencyMap({ mc, pack, lastPoint }: EfficiencyMapProps) {
       {hoverInfo && (
         <div style={{
           position: 'fixed',
-          left: hoverInfo.mouseX + 14,
-          top:  hoverInfo.mouseY - 10,
+          left: hoverInfo.mouseX + 14 + 165 > window.innerWidth - 8
+          ? hoverInfo.mouseX - 165 - 14
+          : hoverInfo.mouseX + 14,
+          top:  Math.min(hoverInfo.mouseY - 10, window.innerHeight - 100 - 8),
           pointerEvents: 'none',
           background: 'rgba(8,8,8,0.95)',
           border: '1px solid #555',

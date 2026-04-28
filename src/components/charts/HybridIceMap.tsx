@@ -45,6 +45,7 @@ interface HoverState {
   torque: number;
   eta: number;
   inBounds: boolean;
+  canvasRight: number;
 }
 
 export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
@@ -199,7 +200,9 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
     const bsfc_pt   = inBounds ? bsfcAt(rpm, load_frac, bsfc_gkWh) : 0;
     const eta       = inBounds ? Math.min(1, 1000 / (bsfc_pt * HHV)) : 0;
 
-    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_nm, eta, inBounds });
+    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_nm, eta, inBounds, 
+    canvasRight: rect.right,
+    });
   }, [bsfc_gkWh]);
 
   const onMouseLeave = useCallback(() => setHover(null), []);
@@ -217,8 +220,10 @@ export function HybridIceMap({ bsfc_gkWh, opRpm, opTorque }: Props) {
       {hover && (
         <div style={{
           position: 'fixed',
-          left: hover.mouseX + 14,
-          top: hover.mouseY - 10,
+          left: hover.mouseX + 14 + 165 > hover.canvasRight
+          ? hover.mouseX - 165 - 14
+          : hover.mouseX + 14,
+          top:  Math.min(hover.mouseY - 10, window.innerHeight - 100 - 8),
           pointerEvents: 'none',
           background: 'rgba(8,8,8,0.95)',
           border: '1px solid #444',

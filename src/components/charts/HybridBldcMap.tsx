@@ -28,6 +28,7 @@ interface HoverState {
   torque: number;
   eta: number;
   inBounds: boolean;
+  canvasRight: number;
 }
 
 export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }: Props) {
@@ -169,7 +170,9 @@ export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }
     const P_elec = (V_bemf * I_m + I_m * I_m * R_W) / ETA_ESC;
     const eta    = inBounds && P_elec > 0.5 ? Math.min(1, P_mech / P_elec) : 0;
 
-    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_m, eta, inBounds });
+    setHover({ mouseX: e.clientX, mouseY: e.clientY, rpm, torque: T_m, eta, inBounds, 
+    canvasRight: rect.right,
+    });
   }, []);
 
   const onMouseLeave = useCallback(() => setHover(null), []);
@@ -187,8 +190,10 @@ export function HybridBldcMap({ label, labelColor = '#4fc3f7', opRpm, opTorque }
       {hover && (
         <div style={{
           position: 'fixed',
-          left: hover.mouseX + 14,
-          top: hover.mouseY - 10,
+          left: hover.mouseX + 14 + 165 > hover.canvasRight
+          ? hover.mouseX - 165 - 14
+          : hover.mouseX + 14,
+          top:  Math.min(hover.mouseY - 10, window.innerHeight - 100 - 8),
           pointerEvents: 'none',
           background: 'rgba(8,8,8,0.95)',
           border: '1px solid #444',
