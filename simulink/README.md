@@ -4,7 +4,7 @@ Two Simulink models built from the same equations and parameters as the web simu
 
 | Model | What it is |
 |---|---|
-| `FSO_HSC_Pack.slx` | HSC 13S2P (EP9343126VVP) bench: a current profile `I_profile = [t I]` drives the pack, and the BMS stops the run on a trip. |
+| `FSO_HSC_Pack.slx` | HSC 13S2P (EP9343126VVP) bench: a current profile `I_profile = [t I]` drives the pack. The run stops on a BMS trip or when the pack is empty. |
 | `FSO_M06H_Hybrid.slx` | The M06H in the 75 m acceleration event (or cruise): ICE on the rear axle, 2 × hub BLDC on the front, HSC pack and BMS. A BMS trip opens the AIRs and the car carries on with the ICE alone. |
 
 The `.slx` files are not committed. You generate them with a script, so that the block code stays readable in git.

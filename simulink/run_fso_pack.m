@@ -22,6 +22,7 @@ codes = {'ok', 'discharge > peak', 'discharge > cont > 3 s', 'charge > peak', ..
          'charge > cont > 3 s', 'cell undervoltage', 'cell overvoltage', 'cell temperature'};
 fprintf('\nHSC 13S2P at %.0f A (Simulink)\n', I_profile(1, 2));
 fprintf('  stopped at          %.1f s, trip: %s\n', Vt.Time(end), codes{max(trip.Data) + 1});
+if soc.Data(end) <= 0, fprintf('  pack empty (SOC = 0) before any BMS trip\n'); end
 fprintf('  delivered           %.2f Ah, %.1f Wh, SOC %.1f %%\n', ...
         I_profile(1,2) * Vt.Time(end) / 3600, E.Data(end), soc.Data(end) * 100);
 fprintf('  pack temperature    %.1f C\n', T.Data(end));

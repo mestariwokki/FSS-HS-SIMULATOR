@@ -43,7 +43,7 @@ while n < n_max
                  trip, v_cell, s(10), s(5)];
 
     if is_hybrid && s(7) >= P.run.x_stop, break; end
-    if ~is_hybrid && trip > 0 && P.run.stop_on_trip, break; end
+    if ~is_hybrid && ((trip > 0 && P.run.stop_on_trip) || s(1) <= 0), break; end
 
     % RK4 with inputs held over the step
     k1 = ds;
