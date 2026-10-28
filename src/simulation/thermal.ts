@@ -1,25 +1,32 @@
 import { T_REF, DU_DT_POS, DU_DT_NEG } from './constants';
 
-/** Full thermal step with Joule + reversible + cooling */
+/**
+ * Lumped pack thermal step: irreversible losses + reversible (entropic) heat − cooling.
+ *
+ * @param P_loss_W  irreversible heat [W]: I²·R0 plus the power dissipated in the RC resistors
+ * @param series    cells in series; with I_pack split over the parallel strings the
+ *                  pack holds S·P cells each carrying I_pack/P, so the summed
+ *                  entropic heat is S · I_pack · T · (−dU/dT)
+ */
 export function stepThermal(
   T_K: number,
   I_pack: number,
-  I_cell: number,
-  R_contact: number,
+  P_loss_W: number,
+  series: number,
   T_amb_K: number,
   mCp: number,
   hA: number,
   dt: number,
 ): number {
-  // Joule heating: I^2 * R_contact
-  const Q_j = I_pack * I_pack * R_contact;
-  // Reversible (entropic) heat: I_cell * T * (dU/dT_pos - dU/dT_neg)
-  const Q_r = I_cell * T_K * (DU_DT_POS - DU_DT_NEG);
-  // Cooling: hA * (T - T_amb)
+  // Reversible heat, positive on discharge for LiCoO2/graphite (dU/dT < 0)
+  const Q_r = reversibleHeat(I_pack, series, T_K);
   const Q_c = hA * (T_K - T_amb_K);
+  return T_K + (P_loss_W + Q_r - Q_c) / mCp * dt;
+}
 
-  const T_new = T_K + (Q_j + Q_r - Q_c) / mCp * dt;
-  return Math.max(T_amb_K, T_new);
+/** Entropic heat of the whole pack [W] (I_pack > 0 = discharge) */
+export function reversibleHeat(I_pack: number, series: number, T_K: number): number {
+  return -I_pack * series * T_K * (DU_DT_POS - DU_DT_NEG);
 }
 
 /** Get Joule heat for data point */

@@ -65,8 +65,9 @@ export function HybridTab() {
 
   // ── EM params ────────────────────────────────────────────────────────────
   // Neumotors 6530/8.5/104 × 2 units, planetary gear 3:1
-  // T_peak/wheel = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 7 kW | P_cont = 2 × 3.5 kW
-  const [P_em_peak, setP_em_peak] = useState(14.0);
+  // T_peak/wheel = 2 × 7.5 Nm × 3 = 45 Nm | P_peak = 2 × 5 kW @ 51 V (HSF) | P_cont = 2 × 3.5 kW
+  // 14 kW would need ≈ 290 A from the HSC, above the 198 A cell rating (2P × 99 A)
+  const [P_em_peak, setP_em_peak] = useState(10.0);
   const [P_em_cont, setP_em_cont] = useState(7.0);
   const [em_gear, setEmGear] = useState(3.0);
   const [kV_em, setKvEm] = useState(104);        // RPM/V per motor (Neumotors 6530/8.5/104)
@@ -84,7 +85,7 @@ export function HybridTab() {
 
   // ── Battery — 2RC Thevenin ────────────────────────────────────────────────
   const [pack_series, setPackSeries] = useState(13);
-  const [pack_parallel, setPackParallel] = useState(1);
+  const [pack_parallel, setPackParallel] = useState(2);  // 13S2P EP9343126VVP
   const [pack_Q_Ah, setPackQ] = useState(13.2);
   const [pack_T_celsius, setPackTemp] = useState(25);
   const [soc0, setSoc0] = useState(100);

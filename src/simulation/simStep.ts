@@ -1,19 +1,32 @@
 import type { SimState, PackConfig, EcmConfig, BatteryDataPoint } from '../types';
 import {
-  F, R_GAS, T_REF,
-  D_S_POS, R_P_POS, K_POS, C_MAX_POS, EPS_POS, L_POS,
-  D_S_NEG, R_P_NEG, K_NEG, C_MAX_NEG, EPS_NEG, L_NEG,
-  ALPHA, C_E, DU_DT_POS, DU_DT_NEG, E_D, E_K,
+  D_S_POS, R_P_POS, K_POS, C_MAX_POS, L_POS,
+  D_S_NEG, R_P_NEG, K_NEG, C_MAX_NEG, L_NEG,
+  C_E, E_D, E_K,
   A_POS, A_NEG, A_CELL,
 } from './constants';
-import { U_pos, U_neg } from './ocv';
-import { arrhenius } from './spm';
+import { U_pos, U_neg, ocvPack } from './ocv';
+import { arrhenius, surfaceConc, exchangeCurrentDensity, butlerVolmer, updateBulkConc } from './spm';
+import { stepThermal } from './thermal';
 
 export interface SimStepResult {
   state: SimState;
   point: BatteryDataPoint;
 }
 
+/**
+ * One battery step.
+ *
+ * Terminal voltage (equivalent-circuit model, the part that sets V_t):
+ *   V_t = OCV_table(SOC) − I·R0_eff − V_RC1 − V_RC2
+ * OCV comes from the EP9343126VVP table (cellData.ts), R0 is the measured /
+ * estimated pack DC resistance, so electrode kinetics are already lumped into it.
+ *
+ * The single-particle model (Ramadass2004 LiCoO2/graphite) still runs alongside
+ * for electrode diagnostics (surface stoichiometry, Butler–Volmer
+ * overpotentials), but it is NOT added to V_t: its parameters belong to a
+ * different cell and would double-count the losses already in R0.
+ */
 export function simStep(
   state: SimState,
   pack: PackConfig,
@@ -35,60 +48,38 @@ export function simStep(
   const V_RC = state.V_RC * alpha1 + i_bat * R1_pack * (1.0 - alpha1);
   const V_RC2 = state.V_RC2 * alpha2 + i_bat * R2_pack * (1.0 - alpha2);
 
-  // Arrhenius-corrected parameters
+  // ── Terminal voltage (ECM) ──
+  const voc_pack = ocvPack(state.soc, pack.series);
+  const vt_pack = voc_pack - i_bat * R_eff - V_RC - V_RC2;
+
+  // ── SPM electrode diagnostics ──
+  // j > 0 = insertion. Discharge (i_bat > 0) inserts Li into the cathode and
+  // extracts it from the anode.
   const Ds_p = arrhenius(D_S_POS, E_D, T);
   const Ds_n = arrhenius(D_S_NEG, E_D, T);
   const k_p = arrhenius(K_POS, E_K, T);
   const k_n = arrhenius(K_NEG, E_K, T);
 
-  // Interfacial current density [A/m2]
   const I_cell = i_bat / pack.parallel;
   const I_dens = I_cell / A_CELL;
   const j_pos = I_dens / (A_POS * L_POS);
   const j_neg = -I_dens / (A_NEG * L_NEG);
 
-  // Surface concentration - parabolic approximation
-  const cs_p = Math.max(50, Math.min(C_MAX_POS - 50,
-    state.c_avg_pos - j_pos * R_P_POS / (5 * Ds_p * F)));
-  const cs_n = Math.max(50, Math.min(C_MAX_NEG - 50,
-    state.c_avg_neg - j_neg * R_P_NEG / (5 * Ds_n * F)));
-
-  // Stoichiometry from surface concentration
+  const cs_p = surfaceConc(state.c_avg_pos, j_pos, R_P_POS, Ds_p, C_MAX_POS);
+  const cs_n = surfaceConc(state.c_avg_neg, j_neg, R_P_NEG, Ds_n, C_MAX_NEG);
   const xp = cs_p / C_MAX_POS;
   const xn = cs_n / C_MAX_NEG;
-
-  // OCP
   const up = U_pos(xp);
   const un = U_neg(xn);
 
-  // Exchange current density j0 (Butler-Volmer)
-  const j0_p = k_p * F * Math.sqrt(C_E * cs_p * (C_MAX_POS - cs_p));
-  const j0_n = k_n * F * Math.sqrt(C_E * cs_n * (C_MAX_NEG - cs_n));
+  const j0_p = exchangeCurrentDensity(k_p, C_E, cs_p, C_MAX_POS, T);
+  const j0_n = exchangeCurrentDensity(k_n, C_E, cs_n, C_MAX_NEG, T);
+  // Reported as voltage losses: both positive on discharge, negative on charge
+  const eta_p_loss = butlerVolmer(j_pos, j0_p, T);
+  const eta_n_loss = -butlerVolmer(j_neg, j0_n, T);
 
-  // Overpotential eta (Butler-Volmer inversion - arcsinh)
-  const eta_p = j0_p > 1e-20
-    ? (R_GAS * T / (ALPHA * F)) * Math.asinh(j_pos / (2 * j0_p))
-    : 0;
-  const eta_n = j0_n > 1e-20
-    ? (R_GAS * T / (ALPHA * F)) * Math.asinh(j_neg / (2 * j0_n))
-    : 0;
-
-  // Terminal voltage (per cell -> times S)
-  const voc_cell = U_pos(xp) - U_neg(xn);
-  const v_cell = up - un - eta_p - eta_n
-    - i_bat * R_eff / pack.series
-    - V_RC / pack.series
-    - V_RC2 / pack.series;
-  const voc_pack = voc_cell * pack.series;
-  const vt_pack = v_cell * pack.series;
-
-  // Update bulk concentrations (Euler)
-  const dc_p = +j_pos / (F * EPS_POS * L_POS);
-  const dc_n = +j_neg / (F * EPS_NEG * L_NEG);
-  const c_avg_pos = Math.max(C_MAX_POS * 0.005,
-    Math.min(C_MAX_POS * 0.995, state.c_avg_pos + dc_p * dt));
-  const c_avg_neg = Math.max(C_MAX_NEG * 0.005,
-    Math.min(C_MAX_NEG * 0.995, state.c_avg_neg + dc_n * dt));
+  const c_avg_pos = updateBulkConc(state.c_avg_pos, j_pos, R_P_POS, dt, C_MAX_POS);
+  const c_avg_neg = updateBulkConc(state.c_avg_neg, j_neg, R_P_NEG, dt, C_MAX_NEG);
 
   // Ah
   const ah = state.ah + i_bat * dt / 3600;
@@ -104,11 +95,12 @@ export function simStep(
   const soc = Math.max(0, Math.min(1, state.soc0 - ah / Q_eff));
   const t = state.t + dt;
 
-  // Thermal model
-  const Q_j = i_bat * i_bat * pack.resistance_Ohm;
-  const Q_r = I_cell * T * (DU_DT_POS - DU_DT_NEG);
-  const Q_c = pack.coolingUA_WK * (T - T_REF);
-  const T_K = Math.max(T_REF, T + (Q_j + Q_r - Q_c) / pack.thermalMass_JK * dt);
+  // ── Thermal: all ohmic losses (R0 incl. ageing, both RC resistors) + entropic heat ──
+  const Q_j = i_bat * i_bat * R_eff
+    + (R1_pack > 0 ? V_RC * V_RC / R1_pack : 0)
+    + (R2_pack > 0 ? V_RC2 * V_RC2 / R2_pack : 0);
+  const T_K = stepThermal(T, i_bat, Q_j, pack.series, state.T_amb_K,
+    pack.thermalMass_JK, pack.coolingUA_WK, dt);
 
   const newState: SimState = {
     t,
@@ -119,6 +111,7 @@ export function simStep(
     V_RC,
     V_RC2,
     T_K,
+    T_amb_K: state.T_amb_K,
     ah,
     wh_out,
     wh_in,
@@ -133,8 +126,8 @@ export function simStep(
     i_bat,
     p_inst: P_inst,
     T_C: T_K - 273.15,
-    eta_pos: eta_p * 1000,
-    eta_neg: eta_n * 1000,
+    eta_pos: eta_p_loss * 1000,
+    eta_neg: eta_n_loss * 1000,
     wh_out,
     wh_in,
     xp,

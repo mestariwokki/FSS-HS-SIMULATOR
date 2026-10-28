@@ -70,6 +70,7 @@ export interface SimState {
   V_RC: number;
   V_RC2: number;
   T_K: number;
+  T_amb_K: number;
   ah: number;
   wh_out: number;
   wh_in: number;
@@ -85,6 +86,7 @@ export interface MotorSimState {
   V_RC2: number;
   T_motor_C: number;
   T_esc_C: number;
+  T_bat_C: number;
   v_kmh: number;
   x_m: number;
   boost_t: number;
@@ -137,6 +139,8 @@ export interface MotorDataPoint {
   soc: number;
   T_motor: number;
   T_esc: number;
+  T_bat?: number;
+  regen_limited?: boolean;
   T_wheel: number;
   eta: number;
   v_kmh: number;

@@ -32,20 +32,25 @@ describe('surfaceConc', () => {
     expect(Math.abs(cs - c_avg)).toBeLessThan(100);
   });
 
-  it('decreases below bulk during discharge (positive j)', () => {
+  it('rises above bulk during insertion (positive j, cathode on discharge)', () => {
     const cs = surfaceConc(c_avg, 0.5, R_P_POS, D_S_POS, C_MAX_POS);
+    expect(cs).toBeGreaterThan(c_avg);
+  });
+
+  it('drops below bulk during extraction (negative j)', () => {
+    const cs = surfaceConc(c_avg, -0.5, R_P_POS, D_S_POS, C_MAX_POS);
     expect(cs).toBeLessThan(c_avg);
   });
 
   it('clamps at 50 mol/m³ minimum', () => {
-    // Extreme j depleting surface
-    const cs = surfaceConc(100, 999, R_P_POS, D_S_POS, C_MAX_POS);
+    // Extreme extraction depleting surface
+    const cs = surfaceConc(100, -999, R_P_POS, D_S_POS, C_MAX_POS);
     expect(cs).toBeGreaterThanOrEqual(50);
   });
 
   it('clamps at c_max - 50 maximum', () => {
-    // Extreme j filling surface
-    const cs = surfaceConc(C_MAX_POS - 100, -999, R_P_POS, D_S_POS, C_MAX_POS);
+    // Extreme insertion filling surface
+    const cs = surfaceConc(C_MAX_POS - 100, 999, R_P_POS, D_S_POS, C_MAX_POS);
     expect(cs).toBeLessThanOrEqual(C_MAX_POS - 50);
   });
 });
@@ -118,29 +123,36 @@ describe('butlerVolmer', () => {
 });
 
 describe('updateBulkConc', () => {
-  it('decreases with positive j (extraction from electrode)', () => {
+  it('increases with positive j (Li inserted)', () => {
     const c0 = C_MAX_POS * 0.5;
-    const j = 0.5; // positive = extracting Li from positive electrode
-    const c1 = updateBulkConc(c0, j, EPS_POS, L_POS, 0.1, C_MAX_POS);
-    expect(c1).toBeGreaterThan(c0); // positive j increases c in positive electrode (Li inserted)
+    const c1 = updateBulkConc(c0, 0.5, R_P_POS, 0.1, C_MAX_POS);
+    expect(c1).toBeGreaterThan(c0);
   });
 
   it('clamps at 0.5% of c_max', () => {
-    const c_new = updateBulkConc(C_MAX_POS * 0.005, 999, EPS_POS, L_POS, 1.0, C_MAX_POS);
+    const c_new = updateBulkConc(C_MAX_POS * 0.005, -999, R_P_POS, 1.0, C_MAX_POS);
     expect(c_new).toBeGreaterThanOrEqual(C_MAX_POS * 0.005);
   });
 
   it('clamps at 99.5% of c_max', () => {
-    const c_new = updateBulkConc(C_MAX_POS * 0.995, -999, EPS_POS, L_POS, 1.0, C_MAX_POS);
+    const c_new = updateBulkConc(C_MAX_POS * 0.995, 999, R_P_POS, 1.0, C_MAX_POS);
     expect(c_new).toBeLessThanOrEqual(C_MAX_POS * 0.995);
   });
 
-  it('rate of change proportional to j / (F*eps*L)', () => {
+  it('rate of change is 3·j / (R_p·F) (spherical particle mass balance)', () => {
     const c0 = C_MAX_POS * 0.5;
     const dt = 0.001; // small dt so clamping doesn't apply
     const j = 0.01;
-    const c1 = updateBulkConc(c0, j, EPS_POS, L_POS, dt, C_MAX_POS);
-    const expected_dc = j / (F * EPS_POS * L_POS) * dt;
+    const c1 = updateBulkConc(c0, j, R_P_POS, dt, C_MAX_POS);
+    const expected_dc = 3 * j / (R_P_POS * F) * dt;
     expect(c1 - c0).toBeCloseTo(expected_dc, 8);
+  });
+
+  it('equals I_dens / (F·eps·L) when j = I_dens / (a·L)', () => {
+    const c0 = C_MAX_POS * 0.5;
+    const I_dens = 10; // A/m² electrode
+    const a = 3 * EPS_POS / R_P_POS;
+    const c1 = updateBulkConc(c0, I_dens / (a * L_POS), R_P_POS, 1, C_MAX_POS);
+    expect(c1 - c0).toBeCloseTo(I_dens / (F * EPS_POS * L_POS), 6);
   });
 });

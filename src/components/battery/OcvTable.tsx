@@ -1,5 +1,5 @@
 import { X_POS_0, X_POS_100, X_NEG_0, X_NEG_100 } from '../../simulation/constants';
-import { U_pos, U_neg } from '../../simulation/ocv';
+import { ocvCell } from '../../simulation/ocv';
 
 interface OcvTableProps {
   series: number;
@@ -11,7 +11,7 @@ export function OcvTable({ series }: OcvTableProps) {
   return (
     <div>
       <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid var(--border-dim)', paddingBottom: '5px', marginBottom: '10px' }}>
-        OCV Table (SPM stoichiometry)
+        OCV Table (EP9343126VVP, estimate until measured)
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
         <thead>
@@ -28,9 +28,7 @@ export function OcvTable({ series }: OcvTableProps) {
             const s = pct / 100;
             const xp = X_POS_0 + (X_POS_100 - X_POS_0) * s;
             const xn = X_NEG_0 + (X_NEG_100 - X_NEG_0) * s;
-            const up = U_pos(xp);
-            const un = U_neg(xn);
-            const oc = up - un;
+            const oc = ocvCell(s);
             const bold = [0, 30, 60, 100].includes(pct);
             return (
               <tr key={pct} style={{ fontWeight: bold ? 'bold' : 'normal' }}>
