@@ -4,6 +4,7 @@ import { useMotorSim } from '../../hooks/useMotorSim';
 import { DEFAULT_MOTOR } from '../../simulation/motor/motorConstants';
 import { kVtoKt } from '../../simulation/motor/motorConstants';
 import { calcSoH } from '../../simulation/ecm';
+import { KQ_DATASHEET, DEFAULT_R1_MOHM, DEFAULT_R2_MOHM } from '../../simulation/cellData';
 import { Acc75Panel } from './Acc75Panel';
 import { MotorLiveValues } from './MotorLiveValues';
 import { MotorSummaryTable } from './MotorSummaryTable';
@@ -26,9 +27,9 @@ export function MotorTab() {
   const [vMin, setVMin] = useState(2.75);
   const [resistance, setResistance] = useState(24);
   const [cycles, setCycles] = useState(0);
-  const [r1] = useState(10);
+  const [r1] = useState(DEFAULT_R1_MOHM);
   const [tau1] = useState(5);
-  const [r2] = useState(15);
+  const [r2] = useState(DEFAULT_R2_MOHM);
   const [tau2] = useState(50);
 
   // ── BLDC motor params ────────────────────────────────────────────────────
@@ -95,11 +96,11 @@ export function MotorTab() {
     i_max: 198,
   }), [series, parallel, capacity, vMax, vNom, vMin, resistance]);
 
-  const soh = calcSoH(cycles, 1.5e-4, 4.0e-4);
+  const soh = calcSoH(cycles, KQ_DATASHEET, 4.0e-4);
   const ecm: EcmConfig = useMemo(() => ({
     R1_Ohm: r1 / 1000, tau1_s: tau1,
     R2_Ohm: r2 / 1000, tau2_s: tau2,
-    cycles, kQ: 1.5e-4, kR: 4.0e-4,
+    cycles, kQ: KQ_DATASHEET, kR: 4.0e-4,
     soh_cap: soh.soh_cap, soh_res: soh.soh_res,
   }), [r1, tau1, r2, tau2, cycles, soh]);
 

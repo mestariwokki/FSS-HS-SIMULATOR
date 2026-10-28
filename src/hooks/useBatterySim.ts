@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import type { SimState, PackConfig, EcmConfig, BatteryDataPoint, SimMode, SimStats } from '../types';
 import { simStep } from '../simulation/simStep';
 import { getNextCurrent, type CurrentParams } from '../simulation/currentControl';
+import { bmsCheck, defaultBmsLimits, BMS_TIMERS_ZERO, type BmsTimers, type BmsLimits } from '../simulation/bms';
 import { T_REF, C_MAX_POS, C_MAX_NEG, X_POS_0, X_POS_100, X_NEG_0, X_NEG_100 } from '../simulation/constants';
 
 function makeState(soc0: number, t0_C: number): SimState {
@@ -17,6 +18,7 @@ function makeState(soc0: number, t0_C: number): SimState {
     V_RC: 0,
     V_RC2: 0,
     T_K: t0_C + 273.15,
+    T_amb_K: t0_C + 273.15,
     ah: 0,
     wh_out: 0,
     wh_in: 0,
@@ -38,7 +40,9 @@ export function useBatterySim() {
   const statsRef = useRef<SimStats>({ min_v: 99, max_T: T_REF, max_eta: 0, max_vsag: 0 });
   const packRef = useRef<PackConfig | null>(null);
   const ecmRef = useRef<EcmConfig | null>(null);
-  const limitsRef = useRef({ oc_limit: 250, t_limit: 60 });
+  const limitsRef = useRef({ oc_limit: 198, t_limit: 60 });
+  const bmsLimitsRef = useRef<BmsLimits>(defaultBmsLimits(2));
+  const bmsTimersRef = useRef<BmsTimers>(BMS_TIMERS_ZERO);
 
   const finish = useCallback((msg: string) => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -72,6 +76,8 @@ export function useBatterySim() {
     ecmRef.current = ecm;
     paramsRef.current = { ...currentParams, cv_t_start: null };
     limitsRef.current = limits;
+    bmsLimitsRef.current = defaultBmsLimits(pack.parallel, limits.t_limit);
+    bmsTimersRef.current = BMS_TIMERS_ZERO;
 
     setRunning(true);
     setPaused(false);
@@ -133,19 +139,13 @@ export function useBatterySim() {
           finish('Battery full \u2014 SOC 100%.');
           return;
         }
-        if (lastPoint.v_t < p.v_min - 2) {
+        // HSC protection (T11.7.7): AIR opens on a BMS trip
+        const bms = bmsCheck(bmsTimersRef.current, bmsLimitsRef.current,
+          lastPoint.v_t, p.series, result.i, lastPoint.T_C, dt);
+        bmsTimersRef.current = bms.timers;
+        if (bms.trip) {
           stateRef.current = st;
-          finish('Stopped \u2014 terminal voltage too low.');
-          return;
-        }
-        if (lastPoint.v_t > p.v_max + 1) {
-          stateRef.current = st;
-          finish('Stopped \u2014 overvoltage during charging.');
-          return;
-        }
-        if (lastPoint.T_C > limitsRef.current.t_limit) {
-          stateRef.current = st;
-          finish(`Stopped \u2014 overtemperature ${lastPoint.T_C.toFixed(1)}\u00b0C > ${limitsRef.current.t_limit}\u00b0C.`);
+          finish(`Stopped \u2014 ${bms.trip} at t = ${st.t.toFixed(1)} s.`);
           return;
         }
       }
@@ -206,8 +206,16 @@ export function useBatterySim() {
           }
 
           if (result.i > 0 && st.soc <= 0.01) { stateRef.current = st; finish('Battery empty.'); return; }
-          if (stepResult.point.v_t < p.v_min - 2) { stateRef.current = st; finish('Undervoltage.'); return; }
-          if (stepResult.point.T_C > limitsRef.current.t_limit) { stateRef.current = st; finish('Overtemperature.'); return; }
+          if (result.i < 0 && st.soc >= 0.999) { stateRef.current = st; finish('Battery full.'); return; }
+          // HSC protection (T11.7.7): AIR opens on a BMS trip
+          const bms = bmsCheck(bmsTimersRef.current, bmsLimitsRef.current,
+            stepResult.point.v_t, p.series, result.i, stepResult.point.T_C, dt);
+          bmsTimersRef.current = bms.timers;
+          if (bms.trip) {
+            stateRef.current = st;
+            finish(`Stopped \u2014 ${bms.trip} at t = ${st.t.toFixed(1)} s.`);
+            return;
+          }
         }
 
         stateRef.current = st;

@@ -1,5 +1,5 @@
 /**
- * 2RC Thevenin equivalent circuit model for NMC lithium-ion cells.
+ * 2RC Thevenin equivalent circuit model for the EP9343126VVP HV-LiCoO2 pouch cell.
  *
  * V_terminal = V_oc(SOC) - I·R0(SOC,T) - V_rc1 - V_rc2
  *
@@ -8,19 +8,23 @@
  */
 import { stepRC } from './ecm';
 import { ocvPack } from './ocv';
+import { packCurrentLimits } from './cellData';
 
-// ── NMC cell resistance lookup tables ─────────────────────────────────────
+// ── EP9343126VVP resistance lookup tables (estimate) ──────────────────────
+// Datasheet gives only 2.1 mΩ typ / 2.5 mΩ max at 1 kHz AC. R0 here is the
+// DC value per cell incl. its share of busbars, scaled so 13S2P ≈ 24 mΩ at
+// 50 % SOC. RC terms are small for a 15C power cell. Replace with pulse-test data.
 // SOC breakpoints (ascending)
 const SOC_PTS = [0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00];
 
 // R0: ohmic resistance [Ω/cell] at 25 °C — increases as SOC drops
-const R0_TABLE = [0.035, 0.030, 0.025, 0.022, 0.020, 0.018, 0.017, 0.016, 0.015];
+const R0_TABLE = [0.0048, 0.0043, 0.0039, 0.0037, 0.0036, 0.0035, 0.0035, 0.0035, 0.0036];
 
 // R1: slow diffusion RC [Ω/cell]  τ1 = 30 s
-const R1_TABLE = [0.015, 0.012, 0.010, 0.009, 0.008, 0.007, 0.007, 0.006, 0.005];
+const R1_TABLE = [0.0016, 0.0014, 0.0012, 0.0011, 0.0010, 0.0010, 0.0010, 0.0010, 0.0010];
 
 // R2: fast surface-film RC [Ω/cell]  τ2 = 5 s
-const R2_TABLE = [0.008, 0.007, 0.006, 0.005, 0.004, 0.004, 0.003, 0.003, 0.002];
+const R2_TABLE = [0.0010, 0.0009, 0.0008, 0.0007, 0.0007, 0.0006, 0.0006, 0.0006, 0.0006];
 
 export const TAU1_S = 30;  // diffusion time constant [s]
 export const TAU2_S = 5;   // surface-film time constant [s]
@@ -92,9 +96,12 @@ export function terminalVoltage(
 // ── Pack-level step ───────────────────────────────────────────────────────
 
 /**
- * Maximum power the pack can deliver at the current state [W].
- * Uses matched-impedance formula: P_max = V_eff² / (4·R0_pack)
- * where V_eff = V_oc − V_rc1 − V_rc2 (net driving EMF).
+ * Maximum power the pack may deliver at the current state [W].
+ * The lower of
+ *   - the matched-impedance limit P = V_eff² / (4·R0_pack), and
+ *   - the cell current limit P = (V_eff − I_max·R0)·I_max,
+ * where V_eff = V_oc − V_rc1 − V_rc2 and I_max defaults to the datasheet
+ * continuous discharge current (99 A/cell × parallel strings).
  */
 export function packMaxPowerW(
   soc: number,
@@ -103,11 +110,15 @@ export function packMaxPowerW(
   pack_series: number,
   pack_parallel: number,
   T_celsius: number,
+  I_max_A: number = packCurrentLimits(pack_parallel).dis_cont,
 ): number {
   const V_oc = ocvPack(soc, pack_series);
   const R0 = r0TempCorrect(r0Cell(soc), T_celsius) * pack_series / pack_parallel;
   const V_eff = Math.max(0, V_oc - V_rc1 - V_rc2);
-  return V_eff * V_eff / (4 * R0);
+  const P_matched = V_eff * V_eff / (4 * R0);
+  const I = Math.min(I_max_A, V_eff / (2 * R0));
+  const P_current = Math.max(0, (V_eff - I * R0) * I);
+  return Math.min(P_matched, P_current);
 }
 
 export interface Battery2RCResult {
