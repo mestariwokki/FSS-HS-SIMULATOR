@@ -5,9 +5,10 @@ import { BatteryTab } from './components/battery/BatteryTab';
 import { MotorTab } from './components/motor/MotorTab';
 import { HybridTab } from './components/hybrid/HybridTab';
 import { FormulasTab } from './components/formulas/FormulasTab';
+import { EnduranceTab } from './components/endurance/EnduranceTab';
 import './App.css';
 
-type Tab = 'battery' | 'motor' | 'hybrid' | 'formulas';
+type Tab = 'battery' | 'motor' | 'hybrid' | 'endurance' | 'formulas';
 
 function App() {
   const [tab, setTab] = useState<Tab>('battery');
@@ -45,6 +46,7 @@ function App() {
           { id: 'battery', label: 'Battery' },
           { id: 'motor', label: 'Motor / Drivetrain' },
           { id: 'hybrid', label: 'Hybrid System' },
+          { id: 'endurance', label: 'Endurance (HSC)' },
           { id: 'formulas', label: 'Formulas' },
         ]}
         active={tab}
@@ -61,6 +63,9 @@ function App() {
         </TabPage>
         <TabPage active={tab === 'hybrid'}>
           <HybridTab />
+        </TabPage>
+        <TabPage active={tab === 'endurance'}>
+          <EnduranceTab />
         </TabPage>
         <TabPage active={tab === 'formulas'}>
           <FormulasTab />

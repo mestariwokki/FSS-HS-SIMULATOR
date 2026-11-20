@@ -1,67 +1,49 @@
 /**
  * 2RC Thevenin equivalent circuit model for the EP9343126VVP HV-LiCoO2 pouch cell.
  *
- * V_terminal = V_oc(SOC) - I·R0(SOC,T) - V_rc1 - V_rc2
+ * V_terminal = V_oc(SOC,T) - I·R0(SOC,T) - V_rc1(SOC,T) - V_rc2(SOC,T)
+ * Parameters come from cellModel.ts (same model as the Battery and Endurance tabs).
  *
  * RC element update (exact discrete):
  *   V_rc(t+dt) = V_rc(t)·exp(-dt/τ) + I·R·(1 - exp(-dt/τ))
  */
 import { stepRC } from './ecm';
-import { ocvPack } from './ocv';
 import { packCurrentLimits } from './cellData';
+import { EP9343126VVP_MODEL, cellRC, arrheniusFactor, defaultPackModel, ocvCellT } from './cellModel';
 
-// ── EP9343126VVP resistance lookup tables (estimate) ──────────────────────
-// Datasheet gives only 2.1 mΩ typ / 2.5 mΩ max at 1 kHz AC. R0 here is the
-// DC value per cell incl. its share of busbars, scaled so 13S2P ≈ 24 mΩ at
-// 50 % SOC. RC terms are small for a 15C power cell. Replace with pulse-test data.
-// SOC breakpoints (ascending)
-const SOC_PTS = [0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00];
+// ── EP9343126VVP resistances — from the shared cell model (cellModel.ts) ──
+// R0 here is per cell incl. its share of the HSC-internal resistance and the
+// cables (busbars, AIR, fuse, shunt, harness), so pack R0 = r0Cell · S / P.
+// RC1 = slow diffusion term, RC2 = fast charge-transfer term.
+const PACK_DEFAULT = defaultPackModel();
+const R_EXTRA_PER_CELL = (PACK_DEFAULT.R_hsc_internal_Ohm + PACK_DEFAULT.R_cables_Ohm)
+  * PACK_DEFAULT.parallel / PACK_DEFAULT.series;
 
-// R0: ohmic resistance [Ω/cell] at 25 °C — increases as SOC drops
-const R0_TABLE = [0.0048, 0.0043, 0.0039, 0.0037, 0.0036, 0.0035, 0.0035, 0.0035, 0.0036];
+export const TAU1_S = EP9343126VVP_MODEL.tau2_s;  // diffusion time constant [s]
+export const TAU2_S = EP9343126VVP_MODEL.tau1_s;  // charge-transfer time constant [s]
 
-// R1: slow diffusion RC [Ω/cell]  τ1 = 30 s
-const R1_TABLE = [0.0016, 0.0014, 0.0012, 0.0011, 0.0010, 0.0010, 0.0010, 0.0010, 0.0010];
-
-// R2: fast surface-film RC [Ω/cell]  τ2 = 5 s
-const R2_TABLE = [0.0010, 0.0009, 0.0008, 0.0007, 0.0007, 0.0006, 0.0006, 0.0006, 0.0006];
-
-export const TAU1_S = 30;  // diffusion time constant [s]
-export const TAU2_S = 5;   // surface-film time constant [s]
-
-// ── Interpolation helper ──────────────────────────────────────────────────
-function lerpTable(soc: number, table: number[]): number {
-  const s = Math.max(SOC_PTS[0], Math.min(SOC_PTS[SOC_PTS.length - 1], soc));
-  for (let i = 0; i < SOC_PTS.length - 1; i++) {
-    if (s >= SOC_PTS[i] && s <= SOC_PTS[i + 1]) {
-      const t = (s - SOC_PTS[i]) / (SOC_PTS[i + 1] - SOC_PTS[i]);
-      return table[i] + t * (table[i + 1] - table[i]);
-    }
-  }
-  return table[table.length - 1];
-}
-
-/** Per-cell R0 at given SOC [Ω/cell] (before temperature correction) */
+/** Per-cell R0 at given SOC, 25 °C [Ω/cell] incl. interconnect share */
 export function r0Cell(soc: number): number {
-  return lerpTable(soc, R0_TABLE);
+  return cellRC(soc, 25).R0 + R_EXTRA_PER_CELL;
 }
 
-/** Per-cell R1 at given SOC [Ω/cell] */
-export function r1Cell(soc: number): number {
-  return lerpTable(soc, R1_TABLE);
+/** Per-cell slow (diffusion) RC resistance at given SOC, 25 °C [Ω/cell] */
+export function r1Cell(soc: number, T_celsius = 25): number {
+  return cellRC(soc, T_celsius).R2;
 }
 
-/** Per-cell R2 at given SOC [Ω/cell] */
-export function r2Cell(soc: number): number {
-  return lerpTable(soc, R2_TABLE);
+/** Per-cell fast (charge-transfer) RC resistance at given SOC, 25 °C [Ω/cell] */
+export function r2Cell(soc: number, T_celsius = 25): number {
+  return cellRC(soc, T_celsius).R1;
 }
 
 /**
- * Arrhenius temperature correction for ohmic resistance.
- * r0_corrected = r0_ref · exp(0.04 · (25 − T_celsius))
+ * Arrhenius temperature correction for the ohmic resistance (cell part only;
+ * the copper/contact share is taken as temperature independent).
  */
 export function r0TempCorrect(r0_ref_Ohm: number, T_celsius: number): number {
-  return r0_ref_Ohm * Math.exp(0.04 * (25 - T_celsius));
+  const extra = Math.min(R_EXTRA_PER_CELL, r0_ref_Ohm);
+  return (r0_ref_Ohm - extra) * arrheniusFactor(EP9343126VVP_MODEL.Ea_R0, T_celsius) + extra;
 }
 
 /**
@@ -112,7 +94,7 @@ export function packMaxPowerW(
   T_celsius: number,
   I_max_A: number = packCurrentLimits(pack_parallel).dis_cont,
 ): number {
-  const V_oc = ocvPack(soc, pack_series);
+  const V_oc = ocvCellT(soc, T_celsius) * pack_series;
   const R0 = r0TempCorrect(r0Cell(soc), T_celsius) * pack_series / pack_parallel;
   const V_eff = Math.max(0, V_oc - V_rc1 - V_rc2);
   const P_matched = V_eff * V_eff / (4 * R0);
@@ -156,13 +138,13 @@ export function battery2RCStep(
   P_elec_W: number,
   dt: number,
 ): Battery2RCResult {
-  const V_oc = ocvPack(soc, pack_series);
+  const V_oc = ocvCellT(soc, T_celsius) * pack_series;
 
-  // Per-cell resistances → pack (series raises V, parallel divides R)
+  // Per-cell resistances at (SOC, T) → pack (series raises V, parallel divides R)
   const r0_corrected = r0TempCorrect(r0Cell(soc), T_celsius);
   const R0_pack = r0_corrected * pack_series / pack_parallel;
-  const R1_pack = r1Cell(soc) * pack_series / pack_parallel;
-  const R2_pack = r2Cell(soc) * pack_series / pack_parallel;
+  const R1_pack = r1Cell(soc, T_celsius) * pack_series / pack_parallel;
+  const R2_pack = r2Cell(soc, T_celsius) * pack_series / pack_parallel;
 
   // Solve for current given power demand:
   //   P = V_terminal · I  and  V_terminal = V_oc − I·R0 − V_rc1 − V_rc2

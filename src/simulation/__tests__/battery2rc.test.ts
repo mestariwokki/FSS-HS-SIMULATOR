@@ -14,8 +14,11 @@ describe('r0Cell / r1Cell / r2Cell — EP9343126VVP lookup', () => {
     expect(r0Cell(0.20)).toBeGreaterThan(r0Cell(1.00));
   });
 
-  it('13S2P pack R0 at 50 % SOC is ≈ 24 mΩ', () => {
-    expect(r0Cell(0.50) * 13 / 2).toBeCloseTo(0.024, 3);
+  it('13S2P pack 10 s DC resistance at 50 % SOC is 20–26 mΩ (old 24 mΩ estimate)', () => {
+    const R10 = (r0Cell(0.5) + r1Cell(0.5) * (1 - Math.exp(-10 / TAU1_S))
+      + r2Cell(0.5) * (1 - Math.exp(-10 / TAU2_S))) * 13 / 2;
+    expect(R10).toBeGreaterThan(0.020);
+    expect(R10).toBeLessThan(0.026);
   });
 
   it('DC r0 is above the datasheet 1 kHz AC value but within 2.5×', () => {
@@ -32,8 +35,8 @@ describe('r0Cell / r1Cell / r2Cell — EP9343126VVP lookup', () => {
     }
   });
 
-  it('clamps SOC below 0.20 to 0.20 value', () => {
-    expect(r0Cell(0.0)).toBeCloseTo(r0Cell(0.20), 6);
+  it('clamps SOC below 0 to the 0 % value', () => {
+    expect(r0Cell(-0.5)).toBeCloseTo(r0Cell(0.0), 9);
   });
 
   it('clamps SOC above 1.0 to 1.0 value', () => {
@@ -54,10 +57,12 @@ describe('r0TempCorrect — Arrhenius correction', () => {
     expect(r0TempCorrect(0.020, 45)).toBeLessThan(0.020);
   });
 
-  it('matches expected value at 0 °C: r0*exp(0.04*25)', () => {
-    const r0 = 0.020;
-    const expected = r0 * Math.exp(0.04 * 25);
-    expect(r0TempCorrect(r0, 0)).toBeCloseTo(expected, 6);
+  it('cell part roughly doubles at 0 °C (Ea ≈ 18 kJ/mol), copper part unchanged', () => {
+    const r0 = r0Cell(0.5);
+    const extra = r0 - 0.0021 * 1.1;   // interconnect share per cell
+    const k0 = (r0TempCorrect(r0, 0) - extra) / (r0 - extra);
+    expect(k0).toBeGreaterThan(1.7);
+    expect(k0).toBeLessThan(2.2);
   });
 });
 
