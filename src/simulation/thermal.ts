@@ -17,16 +17,20 @@ export function stepThermal(
   mCp: number,
   hA: number,
   dt: number,
+  dUdT_VK: number = DU_DT_POS - DU_DT_NEG,
 ): number {
-  // Reversible heat, positive on discharge for LiCoO2/graphite (dU/dT < 0)
-  const Q_r = reversibleHeat(I_pack, series, T_K);
+  // Reversible heat, positive on discharge when dU/dT < 0
+  const Q_r = reversibleHeat(I_pack, series, T_K, dUdT_VK);
   const Q_c = hA * (T_K - T_amb_K);
   return T_K + (P_loss_W + Q_r - Q_c) / mCp * dt;
 }
 
 /** Entropic heat of the whole pack [W] (I_pack > 0 = discharge) */
-export function reversibleHeat(I_pack: number, series: number, T_K: number): number {
-  return -I_pack * series * T_K * (DU_DT_POS - DU_DT_NEG);
+export function reversibleHeat(
+  I_pack: number, series: number, T_K: number,
+  dUdT_VK: number = DU_DT_POS - DU_DT_NEG,
+): number {
+  return -I_pack * series * T_K * dUdT_VK;
 }
 
 /** Get Joule heat for data point */
