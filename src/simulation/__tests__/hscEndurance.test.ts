@@ -37,7 +37,7 @@ describe('track and lap profile', () => {
 
   it('ICE force falls with speed, EM force fades to zero at no-load speed', () => {
     expect(iceWheelForce(veh, 10)).toBeGreaterThan(iceWheelForce(veh, 30));
-    const v_nl = 104 * 50 / veh.em_gear * 2 * Math.PI / 60 * veh.wheel_r_m;
+    const v_nl = 104 * 50 / veh.em.gear * 2 * Math.PI / 60 * veh.wheel_r_m;
     expect(emWheelForce(veh, v_nl * 1.01, 50)).toBe(0);
     expect(emWheelForce(veh, 5, 50)).toBeGreaterThan(0);
   });
@@ -77,7 +77,12 @@ describe('endurance with the HSC', () => {
     const r = runHscEndurance(veh, strat, pack, defaultSetup(HSC_CONCEPTS.C));
     expect(r.bms_trip).toBeNull();
     expect(r.soc_end).toBeGreaterThanOrEqual(strat.soc_target_end - 1e-6);
-    expect(r.soc_end).toBeLessThan(strat.soc_target_end + 0.05);
+    // either the energy is used up to the target, or full deployment (k = 1) is reached
+    if (r.k < 0.999) expect(r.soc_end).toBeLessThan(strat.soc_target_end + 0.05);
+    const lowSoc = runHscEndurance(veh, strat, pack, { ...defaultSetup(HSC_CONCEPTS.C), soc0: 0.45 });
+    expect(lowSoc.k).toBeLessThan(1);
+    expect(lowSoc.soc_end).toBeLessThan(strat.soc_target_end + 0.05);
+    expect(lowSoc.soc_end).toBeGreaterThanOrEqual(strat.soc_target_end - 1e-6);
   });
 
   it('no regen above 43 °C so the 45 °C charge limit is never violated', () => {

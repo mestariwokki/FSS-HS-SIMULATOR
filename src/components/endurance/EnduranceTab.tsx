@@ -48,7 +48,8 @@ export function EnduranceTab() {
   const [grip, setGrip] = useState(0.85);
   const [ClA, setClA] = useState(0);
   const [mass, setMass] = useState(285);
-  const [Pem, setPem] = useState(10);
+  const [Tmot, setTmot] = useState(7.5);
+  const [Gesc, setGesc] = useState(1.3);
   const [laps, setLaps] = useState(21);
   const [Rint, setRint] = useState(1.2);
   const [weakR, setWeakR] = useState(10);
@@ -59,7 +60,8 @@ export function EnduranceTab() {
   const [ms, setMs] = useState(0);
 
   const build = () => {
-    const veh = { ...defaultVehicle(), grip_usage: grip, ClA_m2: ClA, mass_kg: mass, P_em_peak_kW: Pem };
+    const base = defaultVehicle();
+    const veh = { ...base, grip_usage: grip, ClA_m2: ClA, mass_kg: mass, em: { ...base.em, T_motor_max_Nm: Tmot, G_esc_amb_WK: Gesc } };
     const strat = {
       ...defaultStrategy(),
       deploy: auto ? 'auto' as const : 'manual' as const,
@@ -148,7 +150,11 @@ export function EnduranceTab() {
             <ParamGroup label="Mass incl. driver" value={mass} onChange={setMass} min={150} max={400} step={1} unit="kg" />
             <ParamGroup label="Grip used" value={grip} onChange={setGrip} min={0.5} max={1} step={0.01} unit="× μ" />
             <ParamGroup label="ClA" value={ClA} onChange={setClA} min={0} max={5} step={0.1} unit="m²" />
-            <ParamGroup label="EM peak (total)" value={Pem} onChange={setPem} min={0} max={20} step={0.5} unit="kW" />
+          </Panel>
+          <Panel title="Hub motors + ESCs" color="var(--accent-em)">
+            <ParamGroup label="Motor T max" value={Tmot} onChange={setTmot} min={1} max={15} step={0.1} unit="Nm" />
+            <ParamGroup label="ESC cooling" value={Gesc} onChange={setGesc} min={0.2} max={10} step={0.1} unit="W/K" />
+            <div style={{ fontSize: '10px', color: 'var(--text-faint)' }}>Neumotors 6530 7.5 Nm / 85 A, ESC 86 A cont / 100 A 5 s (HSF). Losses and thermal: estimates.</div>
           </Panel>
           <Panel title="Pack">
             <ParamGroup label="R busbar+AIR+fuse" value={Rint} onChange={setRint} min={0} max={10} step={0.1} unit="mΩ" />
@@ -170,7 +176,7 @@ export function EnduranceTab() {
                 <thead>
                   <tr style={{ color: 'var(--text-dim)', textAlign: 'right' }}>
                     <th style={{ textAlign: 'left' }}>Concept</th><th>k</th><th>I_rms [A]</th><th>I_peak [A]</th>
-                    <th>T sensor max [°C]</th><th>T core max [°C]</th><th>SOC end [%]</th><th>Lap gain [s]</th><th>BMS</th>
+                    <th>T sensor max [°C]</th><th>T core max [°C]</th><th>T motor [°C]</th><th>SOC end [%]</th><th>Lap gain [s]</th><th>BMS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,6 +191,7 @@ export function EnduranceTab() {
                         <td>{r.I_peak_A.toFixed(0)}</td>
                         <td style={{ color: r.T_sensor_max_C > bmsT - 3 ? 'var(--accent-alert)' : undefined }}>{r.T_sensor_max_C.toFixed(1)}</td>
                         <td>{r.T_hot_max_C.toFixed(1)}</td>
+                        <td>{r.T_motor_max_C.toFixed(0)}</td>
                         <td>{(r.soc_end * 100).toFixed(0)}</td>
                         <td>{gain.toFixed(2)}</td>
                         <td style={{ color: r.bms_trip ? 'var(--accent-alert)' : 'var(--accent-vehicle)' }}>{r.bms_trip ? `trip lap ${r.bms_trip_lap}` : 'OK'}</td>
@@ -216,6 +223,10 @@ export function EnduranceTab() {
                 <ValueBox label="Total time" value={res.total_time_s.toFixed(0)} unit="s" />
                 <ValueBox label="V cell min / max" value={`${res.V_cell_min.toFixed(2)} / ${res.V_cell_max.toFixed(2)}`} unit="V" />
                 <ValueBox label="V HSC max (≤ 60)" value={res.V_hsc_max.toFixed(2)} unit="V" color={res.V_hsc_max < 60 ? 'green' : 'red'} />
+                <ValueBox label="Motor winding max" value={res.T_motor_max_C.toFixed(1)} unit="°C" color={res.T_motor_max_C > 85 ? 'red' : 'blue'} />
+                <ValueBox label="ESC max" value={res.T_esc_max_C.toFixed(1)} unit="°C" color={res.T_esc_max_C > 85 ? 'red' : 'blue'} />
+                <ValueBox label="Drive / regen η" value={`${(res.eta_drive_avg * 100).toFixed(0)} / ${(res.eta_regen_avg * 100).toFixed(0)}`} unit="%" />
+                <ValueBox label="EM derated" value={res.em_derate_time_s.toFixed(0)} unit="s" color={res.em_derate_time_s > 0 ? 'red' : 'green'} />
               </div>
               {acc && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '14px' }}>
@@ -235,6 +246,14 @@ export function EnduranceTab() {
                   { key: 'T_struct', color: '#4fc3f7', label: 'structure', lineWidth: 1.5, dashed: true },
                 ]}
                 hLines={[{ value: bmsT, color: 'rgba(239,83,80,0.5)' }, { value: 45, color: 'rgba(255,167,38,0.3)' }]}
+              />
+              <ChartLabel>Hub motor winding and ESC temperature [°C] (VESC derating from 85 °C)</ChartLabel>
+              <LineChart data={tr} xKey="t" height={150} xUnit=" s" yUnit=" °C"
+                series={[
+                  { key: 'T_motor', color: '#4fc3f7', label: 'motor winding', lineWidth: 2 },
+                  { key: 'T_esc', color: '#ffa726', label: 'ESC', lineWidth: 2 },
+                ]}
+                hLines={[{ value: 85, color: 'rgba(239,83,80,0.4)' }]}
               />
               <ChartLabel>HSC current [A] (&gt; 0 discharge)</ChartLabel>
               <LineChart data={tr} xKey="t" height={160} xUnit=" s" yUnit=" A" smooth={false}

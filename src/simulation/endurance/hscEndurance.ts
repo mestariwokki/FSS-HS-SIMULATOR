@@ -21,7 +21,10 @@
  * Acceleration — 75 m from standstill, time-domain with dt = 2 ms.
  */
 import { interpICETorque } from '../motor/iceEngine';
-import { kVtoKt } from '../motor/motorConstants';
+import {
+  type EmDriveParams, type EmThermalState, type EmOperatingPoint,
+  defaultEmDrive, initEmThermal, emCurrentLimit, emMaxWheelForce, emOperatingPoint, stepEmThermal,
+} from '../motor/emDrive';
 import {
   type PackModelConfig, type PackState,
   initPackState, evalPack, stepPack, currentForPower, cellsHeatCapacity,
@@ -58,14 +61,8 @@ export interface HybridVehicleParams {
   ice_rpm_max: number;
   ice_rpm_launch: number;  // clutch-slip launch rpm
   bsfc_gkWh: number;
-  // Hub motors (front)
-  n_em: number;
-  kV_em: number;           // RPM/V
-  em_gear: number;
-  I_em_peak_A: number;     // per motor (phase-equivalent, T = Kt·I)
-  P_em_peak_kW: number;    // total mechanical
-  eta_em: number;          // battery → wheel (ESC × motor × gear)
-  eta_regen: number;       // wheel → battery
+  // Hub motors + ESCs (front), loss and thermal model
+  em: EmDriveParams;
   brake_front_share: number;
 }
 
@@ -90,13 +87,7 @@ export function defaultVehicle(): HybridVehicleParams {
     ice_rpm_max: 10500,
     ice_rpm_launch: 6000,
     bsfc_gkWh: 300,
-    n_em: 2,
-    kV_em: 104,
-    em_gear: 3.0,
-    I_em_peak_A: 100,
-    P_em_peak_kW: 10,
-    eta_em: 0.85,
-    eta_regen: 0.75,
+    em: defaultEmDrive(),
     brake_front_share: 0.65,
   };
 }
@@ -183,17 +174,27 @@ export function iceWheelForce(veh: HybridVehicleParams, v: number): number {
   return best;
 }
 
-/** Hub-motor mechanical force limit [N] at speed v and DC-link voltage V_dc. */
-export function emWheelForce(veh: HybridVehicleParams, v: number, V_dc: number): number {
-  const w_m = Math.max(0.1, v) / veh.wheel_r_m * veh.em_gear;
-  const rpm_m = w_m * 60 / (2 * Math.PI);
-  const rpm_nl = veh.kV_em * V_dc;
-  // field weakening: torque fades over the last 20 % below no-load speed
-  const fw = Math.max(0, Math.min(1, (rpm_nl - rpm_m) / (0.2 * rpm_nl)));
-  const T_wheel = veh.n_em * kVtoKt(veh.kV_em) * veh.I_em_peak_A * veh.em_gear * 0.97 * fw;
-  const F_T = T_wheel / veh.wheel_r_m;
-  const F_P = veh.P_em_peak_kW * 1000 * fw / Math.max(0.5, v);
-  return Math.min(F_T, F_P);
+/**
+ * Hub-motor wheel force limit [N] at speed v and DC-link voltage V_dc, for a
+ * per-motor phase-current limit (default: cold motor, ESC peak allowed).
+ */
+export function emWheelForce(
+  veh: HybridVehicleParams, v: number, V_dc: number,
+  I_lim: number = emCurrentLimit(veh.em, initEmThermal(25)), peak = true,
+): number {
+  return emMaxWheelForce(veh.em, v, V_dc, veh.wheel_r_m, I_lim, peak);
+}
+
+/** Scale a wheel force so its electrical power stays within [P_min, P_max]. */
+function limitByPower(veh: HybridVehicleParams, F: number, v: number, V_dc: number, P_min: number, P_max: number): number {
+  let f = F;
+  for (let i = 0; i < 3 && f !== 0; i++) {
+    const P = emOperatingPoint(veh.em, f, v, V_dc, veh.wheel_r_m).P_elec_W;
+    if (P > P_max && P > 0) f *= P_max / P;
+    else if (P < P_min && P < 0) f *= P_min / P;
+    else break;
+  }
+  return f;
 }
 
 interface AxleLimits { F_front: number; F_rear: number; fx: number; D: number; Rr: number }
@@ -229,15 +230,16 @@ interface TractionResult { a: number; F_ice: number; F_em: number }
 
 function fullThrottle(
   veh: HybridVehicleParams, v: number, kappa: number, k: number,
-  V_dc: number, P_em_elec_max: number, a0: number,
+  V_dc: number, P_em_elec_max: number, a0: number, I_lim: number, peak = true,
 ): TractionResult {
   let a = a0;
   let F_ice = 0, F_em = 0;
+  const F_motor = k > 0 ? emWheelForce(veh, v, V_dc, I_lim, peak) : 0;
   for (let it = 0; it < 3; it++) {
     const L = axleLimits(veh, v, kappa, a);
     F_ice = Math.min(iceWheelForce(veh, v), L.F_rear);
-    const F_em_bat = P_em_elec_max * veh.eta_em / Math.max(0.5, v);
-    F_em = k * Math.max(0, Math.min(emWheelForce(veh, v, V_dc), L.F_front, F_em_bat));
+    F_em = k * Math.max(0, Math.min(F_motor, L.F_front));
+    if (F_em > 0) F_em = limitByPower(veh, F_em, v, V_dc, -Infinity, P_em_elec_max);
     a = (F_ice + F_em - L.D - L.Rr) / veh.mass_kg;
   }
   return { a, F_ice, F_em };
@@ -249,7 +251,9 @@ export interface LapPoint {
   s: number;
   v: number;          // speed at the start of the step [m/s]
   dt: number;         // time to the next point [s]
-  P_elec_W: number;   // HSC electrical power request (>0 discharge)
+  vm: number;         // mean speed over the step [m/s]
+  F_em_N: number;     // hub-motor wheel force (>0 drive, <0 regen)
+  P_elec_W: number;   // HSC electrical power at the planning voltage (>0 discharge)
   P_ice_W: number;    // ICE wheel power
   phase: 'accel' | 'brake' | 'steady';
 }
@@ -262,6 +266,7 @@ export function lapProfile(
   k: number,
   V_dc: number,
   v_entry: number | null,
+  I_lim: number = emCurrentLimit(veh.em, initEmThermal(25)),
 ): LapPoint[] {
   const { s, kappa } = discretise(track, ds);
   const n = s.length;
@@ -275,7 +280,7 @@ export function lapProfile(
   vf[0] = Math.min(vlim[0], v_entry ?? 0);
   let a_prev = 0;
   for (let i = 0; i < n; i++) {
-    const tr = fullThrottle(veh, vf[i], kappa[i], k, V_dc, P_em_elec_max, a_prev);
+    const tr = fullThrottle(veh, vf[i], kappa[i], k, V_dc, P_em_elec_max, a_prev, I_lim);
     a_prev = tr.a;
     Fem[i] = tr.F_em;
     const v2 = vf[i] * vf[i] + 2 * Math.max(0, tr.a) * ds;
@@ -293,7 +298,7 @@ export function lapProfile(
   }
 
   const pts: LapPoint[] = [];
-  const P_chg_max_mech = strat.I_chg_limit_A * V_dc / veh.eta_regen;
+  const P_chg_min = -strat.I_chg_limit_A * V_dc;
   for (let i = 0; i < n; i++) {
     const v0 = vb[i], v1 = vb[i + 1];
     const vm = Math.max(0.5, 0.5 * (v0 + v1));
@@ -301,36 +306,31 @@ export function lapProfile(
     const a = (v1 * v1 - v0 * v0) / (2 * ds);
     const L = axleLimits(veh, vm, kappa[i], a);
     const F_res = L.D + L.Rr;
-    let P_elec = 0, P_ice = 0;
+    let F_em = 0, P_ice = 0;
     let phase: LapPoint['phase'];
     if (a > 0.05) {
       phase = 'accel';
       const F_tot = veh.mass_kg * a + F_res;
-      const F_em = Math.min(Fem[i], F_tot);
-      P_elec = F_em * vm / veh.eta_em;
+      F_em = Math.min(Fem[i], F_tot);
       P_ice = Math.max(0, F_tot - F_em) * vm;
     } else if (a < -0.05) {
       phase = 'brake';
       const F_brake = veh.mass_kg * -a - F_res;
       if (F_brake > 0 && strat.regen) {
-        const F_regen = Math.min(
-          F_brake * veh.brake_front_share,
-          emWheelForce(veh, vm, V_dc),
-          P_chg_max_mech / vm,
-        );
-        P_elec = -F_regen * vm * veh.eta_regen;
+        const F_max = Math.min(F_brake * veh.brake_front_share, emWheelForce(veh, vm, V_dc, I_lim));
+        F_em = limitByPower(veh, -F_max, vm, V_dc, P_chg_min, Infinity);
       }
     } else {
       phase = 'steady';
       P_ice = F_res * vm;
       if (strat.ttr_kW > 0) {
-        const P_mech = Math.min(strat.ttr_kW * 1000 / veh.eta_regen, P_chg_max_mech,
-          emWheelForce(veh, vm, V_dc) * vm);
-        P_elec = -P_mech * veh.eta_regen;
-        P_ice += P_mech;
+        const F_max = Math.min(strat.ttr_kW * 1000 / vm, emWheelForce(veh, vm, V_dc, I_lim));
+        F_em = limitByPower(veh, -F_max, vm, V_dc, Math.max(P_chg_min, -strat.ttr_kW * 1000), Infinity);
+        P_ice += -F_em * vm;
       }
     }
-    pts.push({ s: s[i], v: v0, dt, P_elec_W: P_elec, P_ice_W: P_ice, phase });
+    const P_elec = emOperatingPoint(veh.em, F_em, vm, V_dc, veh.wheel_r_m).P_elec_W;
+    pts.push({ s: s[i], v: v0, vm, dt, F_em_N: F_em, P_elec_W: P_elec, P_ice_W: P_ice, phase });
   }
   return pts;
 }
@@ -350,6 +350,8 @@ export interface TracePoint {
   T_sensor: number;
   T_mean: number;
   T_struct: number;
+  T_motor: number;
+  T_esc: number;
   P_kW: number;
   Q_W: number;
 }
@@ -383,6 +385,15 @@ export interface EnduranceResult {
   bms_trip_t_s: number | null;
   bms_trip_lap: number | null;
   derate_time_s: number;
+  /** Hub-motor winding / ESC peak temperatures [°C] */
+  T_motor_max_C: number;
+  T_esc_max_C: number;
+  /** Time the motors/ESCs ran thermally derated [s] */
+  em_derate_time_s: number;
+  I_phase_peak_A: number;
+  /** Mean battery→wheel efficiency while driving, wheel→battery while regenerating */
+  eta_drive_avg: number;
+  eta_regen_avg: number;
   trace: TracePoint[];
   lap_speed: { s: number; v_kmh: number; P_kW: number }[];
 }
@@ -436,6 +447,9 @@ function simulateEvent(
   let t = 0, drive_t = 0, I2 = 0, Ipk = 0, Irg = 0, whOut = 0, whIn = 0, fuel = 0, Qsum = 0;
   let socMin = setup.soc0, Thmax = setup.T0_C, Tsensmax = setup.T0_C, Tsmax = setup.T0_C;
   let Vmin = 9, Vmax = 0, Vhscmax = 0, derate = 0;
+  let em: EmThermalState = initEmThermal(setup.T_amb_C);
+  let Tmmax = setup.T_amb_C, Temax = setup.T_amb_C, emDer = 0, Iph = 0;
+  let Ewheel_d = 0, Eel_d = 0, Ewheel_r = 0, Eel_r = 0;
   const lapTimes: number[] = [];
   const IrmsLap: number[] = [];
   const trace: TracePoint[] = [];
@@ -449,14 +463,17 @@ function simulateEvent(
     trace.push({
       t, lap, v_kmh: v * 3.6, I, V_hsc: e.V_hsc, V_cell_min: e.V_cell_min, V_cell_max: e.V_cell_max,
       soc: ps.soc * 100, T_hot: hottestCellC(th), T_sensor: th.T_hot_C,
-      T_mean: meanCellC(th, setup.concept), T_struct: th.T_struct_C, P_kW: P / 1000, Q_W: Q,
+      T_mean: meanCellC(th, setup.concept), T_struct: th.T_struct_C,
+      T_motor: em.T_wind_C, T_esc: em.T_esc_C, P_kW: P / 1000, Q_W: Q,
     });
   };
 
   for (let lap = 1; lap <= setup.n_laps; lap++) {
     const Tm = meanCellC(th, setup.concept);
     const V_dc = evalPack(ps, pack, 100, Tm).V_esc;
-    const prof = lapProfile(veh, strat, setup.track, setup.ds_m, live ? k : 0, V_dc, v_entry);
+    // Plan the lap with the drive's current limit at lap start (thermal derating)
+    const prof = lapProfile(veh, strat, setup.track, setup.ds_m, live ? k : 0, V_dc, v_entry,
+      emCurrentLimit(veh.em, em));
     v_entry = prof[prof.length - 1].v;
     if (lap === 2 && record) {
       lapSpeed = prof.filter((_, i) => i % 2 === 0).map(p => ({ s: p.s, v_kmh: p.v * 3.6, P_kW: p.P_elec_W / 1000 }));
@@ -466,14 +483,31 @@ function simulateEvent(
       const dt = p.dt;
       const T_mean = meanCellC(th, setup.concept);
       let I = 0;
-      const regenBlocked = p.P_elec_W < 0
-        && th.T_hot_C > strat.regen_T_max_C;
-      if (live && p.P_elec_W !== 0 && !regenBlocked) {
-        const I_req = currentForPower(ps, pack, p.P_elec_W, T_mean);
+      let op: EmOperatingPoint = { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 };
+      const regenBlocked = p.F_em_N < 0 && th.T_hot_C > strat.regen_T_max_C;
+      if (live && p.F_em_N !== 0 && !regenBlocked) {
+        // Re-check the motor/ESC limit at the present temperature
+        const V_now = evalPack(ps, pack, 0, T_mean).V_esc;
+        const I_lim = emCurrentLimit(veh.em, em);
+        const F_cap = emWheelForce(veh, p.vm, V_now, I_lim, em.esc_peak_t < veh.em.esc_peak_s);
+        let F = Math.sign(p.F_em_N) * Math.min(Math.abs(p.F_em_N), F_cap);
+        if (Math.abs(F) < Math.abs(p.F_em_N) - 1e-6) emDer += dt;
+        op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m);
+        const I_req = currentForPower(ps, pack, op.P_elec_W, T_mean);
         const r = limitCurrent(ps, pack, strat, I_req, T_mean);
         I = r.I;
-        if (r.derated) derate += dt;
+        if (r.derated) {
+          derate += dt;
+          F *= I_req !== 0 ? I / I_req : 0;
+          op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m);
+        }
+        const Pw = F * p.vm * dt;
+        if (F > 0) { Ewheel_d += Pw; Eel_d += op.P_elec_W * dt; }
+        else if (F < 0) { Ewheel_r += -Pw; Eel_r += -op.P_elec_W * dt; }
       }
+      em = stepEmThermal(veh.em, em, op, p.vm, setup.T_amb_C, dt);
+      Tmmax = Math.max(Tmmax, em.T_wind_C); Temax = Math.max(Temax, em.T_esc_C);
+      Iph = Math.max(Iph, op.I_phase_A);
       const e = evalPack(ps, pack, I, T_mean);
       const Q = e.Q_cells_W;
       th = stepHscThermal(th, setup.concept, C_cells, Q, e.Q_hsc_internal_W, setup.T_amb_C, p.v, fanHsc && live, dt, nCells);
@@ -511,6 +545,7 @@ function simulateEvent(
       for (let i = 0; i < steps; i++) {
         const dt = setup.driver_change_s / steps;
         th = stepHscThermal(th, setup.concept, C_cells, 0, 0, setup.T_amb_C, 0, false, dt, nCells);
+        em = stepEmThermal(veh.em, em, { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 }, 0, setup.T_amb_C, dt);
         ps = stepPack(ps, pack, 0, meanCellC(th, setup.concept), dt);
         t += dt;
         rec(lap, 0, 0, evalPack(ps, pack, 0, meanCellC(th, setup.concept)), 0, 0);
@@ -550,6 +585,12 @@ function simulateEvent(
     bms_trip_t_s: tripT,
     bms_trip_lap: tripLap,
     derate_time_s: derate,
+    T_motor_max_C: Tmmax,
+    T_esc_max_C: Temax,
+    em_derate_time_s: emDer,
+    I_phase_peak_A: Iph,
+    eta_drive_avg: Eel_d > 0 ? Ewheel_d / Eel_d : 0,
+    eta_regen_avg: Ewheel_r > 0 ? Eel_r / Ewheel_r : 0,
     trace,
     lap_speed: lapSpeed,
   };
@@ -586,6 +627,7 @@ export function runHscEndurance(
 
 export interface AccelResult {
   t75_s: number;
+  I_phase_peak_A: number;
   t75_ice_only_s: number;
   v75_kmh: number;
   I_peak_A: number;
@@ -619,19 +661,28 @@ export function runAcceleration(
   let trip: string | null = null;
   const trace: AccelResult['trace'] = [];
   let live = useEm;
+  let em = initEmThermal(T0_C);
+  let Iph = 0;
   while (x < 75 && t < 20) {
     const T_m = meanCellC(th, concept);
     const e0 = evalPack(ps, pack, 0, T_m);
-    const tr = fullThrottle(vehL, v, 0, live ? 1 : 0, e0.V_esc, strat.I_dis_limit_A * e0.V_esc, a);
+    const tr = fullThrottle(vehL, v, 0, live ? 1 : 0, e0.V_esc, strat.I_dis_limit_A * e0.V_esc, a,
+      emCurrentLimit(veh.em, em), em.esc_peak_t < veh.em.esc_peak_s);
     let I = 0;
     let F_em = tr.F_em;
+    let op: EmOperatingPoint = { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 };
     if (live && F_em > 0) {
-      const P = F_em * Math.max(0.5, v) / veh.eta_em;
-      const r = limitCurrent(ps, pack, strat, currentForPower(ps, pack, P, T_m), T_m);
+      op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m);
+      const I_req = currentForPower(ps, pack, op.P_elec_W, T_m);
+      const r = limitCurrent(ps, pack, strat, I_req, T_m);
       I = r.I;
-      const e = evalPack(ps, pack, I, T_m);
-      F_em = Math.min(F_em, I * e.V_esc * veh.eta_em / Math.max(0.5, v));
+      if (r.derated && I_req > 0) {
+        F_em *= I / I_req;
+        op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m);
+      }
     }
+    em = stepEmThermal(veh.em, em, op, v, T0_C, dt);
+    Iph = Math.max(Iph, op.I_phase_A);
     const L = axleLimits(vehL, v, 0, a);
     a = (tr.F_ice + F_em - L.D - L.Rr) / veh.mass_kg;
     const e = evalPack(ps, pack, I, T_m);
@@ -656,6 +707,7 @@ export function runAcceleration(
     t75_ice_only_s: iceOnly,
     v75_kmh: v * 3.6,
     I_peak_A: Ipk,
+    I_phase_peak_A: Iph,
     V_cell_min: Vmin === 9 ? NaN : Vmin,
     V_hsc_min: Vhmin === 999 ? NaN : Vhmin,
     Wh: wh,
