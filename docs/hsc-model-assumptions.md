@@ -87,8 +87,10 @@ stack are close to adiabatic.
   (3 min, AIR open, fan off).
 * **Vehicle**: quasi-steady lap simulation, 1 m grid. ICE on the rear axle
   (dyno torque curve, CP2 gearbox, best gear, clutch-slip launch), two hub
-  motors on the front (Kt from kV 104, 100 A, 10 kW total, field weakening at
-  the actual pack voltage), weight transfer, friction ellipse, driver uses
+  motors on the front (`motor/emDrive.ts`: Kt from kV 104, 7.5 Nm / 85 A
+  motor limit, ESC 86 A cont / 100 A 5 s and 6.88 / 8 kW, copper, iron and
+  ESC losses, 2-node motor and 1-node ESC thermal with derating, torque fade
+  near no-load speed at the actual pack voltage), weight transfer, friction ellipse, driver uses
   85 % of μ = 1.6. Regen on the front axle (65 % brake share), limited by
   52.8 A, the cell ceiling 4.40 V and **no regen above 43 °C** (the datasheet
   allows charging only at 0–45 °C, and the BMS opens the AIR otherwise).
@@ -98,37 +100,63 @@ stack are close to adiabatic.
 * **BMS** (`bms.ts`, T11.7.7): weakest-cell voltage 500 ms, hottest sensor
   58 °C 1 s (2 °C margin to the 60 °C limit), current limits.
 
-### First results (defaults, T_amb 30 °C, start 95 % SOC)
+### Results (defaults, T_amb 30 °C, start 95 % SOC, hub motors from `motor/emDrive.ts`)
 
-| Concept | k (auto) | I_rms | I_peak | T sensor max | T core max | lap gain vs ICE only |
+The hub motors' 7.5 Nm limit (≈ 82 A phase) caps the EM force at about
+210 N at the wheels. That, not the HSC, now sets how much boost there is:
+auto deployment reaches k = 1 with SOC to spare.
+
+| Concept | k (auto) | I_rms | I_peak | T sensor max | T core max | SOC end |
 |---|---|---|---|---|---|---|
-| A | 0.87 | 65 A | 163 A | 53.4 °C | 55.1 °C | 0.46 s |
-| B | 0.91 | 68 A | 171 A | 48.1 °C | 50.0 °C | 0.48 s |
-| C | 0.97 | 73 A | 183 A | 43.0 °C | 45.2 °C | 0.51 s |
+| A | 1.00 | 59 A | 144 A | 47.9 °C | 49.0 °C | 29 % |
+| B | 1.00 | 60 A | 144 A | 42.3 °C | 43.4 °C | 35 % |
+| C | 1.00 | 60 A | 144 A | 37.7 °C | 38.9 °C | 35 % |
+
+Endurance gain vs ICE only: 9.3 s over 21 laps (≈ 0.44 s/lap). Motor
+winding max 69 °C, ESC 41 °C, no thermal derating. Mean efficiency 88 %
+battery → wheel, 86.5 % wheel → battery.
 
 Sensitivity for concept A:
 
-| Case | I_rms | T sensor max | SOC end | lap gain |
+| Case | I_rms | T sensor max | SOC end |
+|---|---|---|---|
+| k = 0.5 | 33 A | 36.2 °C | 79 % |
+| k = 0.7 | 43 A | 39.3 °C | 62 % |
+| auto, ESC limited to 100 A | 54 A | 44.4 °C | 40 % |
+| auto, T_amb 25 °C | 59 A | 44.5 °C | 33 % |
+| auto, T_amb 35 °C | 58 A | 52.0 °C | 22 % |
+
+Acceleration 75 m (95 % SOC, 25 °C): 3.84 s hybrid vs 3.96 s ICE only,
+144 A peak, weakest cell 4.13 V. At 30 % SOC and 5 °C: 3.84 s, 156 A,
+weakest cell 3.37 V, no trip.
+
+**Reading:** the endurance RMS current is about 60 A, above the 40 A that
+the concept document took as safe for passive cooling. Passive concept A
+still stays 10 °C below the 58 °C BMS limit at 30 °C ambient, and 6 °C below
+it at 35 °C. The earlier 65–73 A / BMS-trip numbers assumed 100 A × Kt of
+motor torque, which the 7.5 Nm motor rating does not allow.
+
+### Gear ratio (`node scripts/gear-sweep.mjs 2.5 3 3.5 4`)
+
+Back-EMF per motor with the current 3.0 gear: 7.4 V at 20 km/h, 22 V at
+60 km/h, 37 V at 100 km/h, 45 V at 120 km/h (0.37 V per km/h). The HSC
+gives 57 V open-circuit at 95 % SOC and 49 V at 20 % SOC.
+
+| Gear | 75 m | v where back-EMF = HSC voltage (95 % / 20 % SOC) | Endurance gain | T sensor A |
 |---|---|---|---|---|
-| k = 0.3 | 29 A | 34.8 °C | 89 % | 0.17 s |
-| k = 0.5 | 40 A | 38.3 °C | 68 % | 0.27 s |
-| k = 0.7 | 53 A | 44.0 °C | 44 % | 0.38 s |
-| k = 1.0 (full boost) | 70 A | **58.2 °C → BMS trip lap 20** | — | 0.52 s |
-| auto, ESC limited to 100 A | 56 A | 46.1 °C | 33 % | 0.46 s |
-| auto, T_amb 35 °C | 61 A | 54.9 °C | 15 % | 0.44 s |
-| auto, T_amb 25 °C | 67 A | 51.7 °C | 15 % | 0.47 s |
+| 2.5 | 3.858 s | 183 / 158 km/h | 7.8 s | 42.9 °C |
+| 3.0 | 3.840 s | 152 / 131 km/h | 9.3 s | 47.9 °C |
+| 3.5 | 3.822 s | 130 / 112 km/h | 10.4 s | 50.5 °C |
+| 4.0 | 3.814 s | 114 / 98 km/h | 10.9 s | 47.5 °C |
+| 5.0 | 3.814 s | 91 / 79 km/h | 10.2 s | 41.4 °C |
 
-Acceleration 75 m (95 % SOC, 25 °C): 3.81 s hybrid vs 3.96 s ICE only,
-190 A peak, weakest cell 4.06 V, 6.4 Wh. At 30 % SOC and 5 °C: 3.82 s,
-198 A, weakest cell 3.25 V — no trip.
-
-**Reading:** with full boost the endurance RMS current is 65–75 A, well
-above the 40 A that the concept document took as safe for passive cooling.
-Passive concept A reaches the 58 °C BMS limit at full boost, and stays
-below it only because the energy strategy (k ≈ 0.87) or regen blocked above
-43 °C limits it. Limiting the ESC current to ~100 A gives the same lap time
-as unlimited auto mode with ~7 °C less, because the lap gain comes from
-many medium boosts, not from the 160–190 A peaks.
+A higher gear gives more force at low speed but the motor runs out of
+voltage earlier. Above the speed where back-EMF exceeds the HSC voltage, the
+ESC body diodes rectify and the motor charges the HSC uncontrolled (charge
+current and the 45 °C charge limit). The car reaches about 118 km/h at
+75 m and 106 km/h in endurance, so a gear of about 3.5 is the most that
+keeps margin in both. The model fades motor torque linearly over the last
+20 % below no-load speed; the real VESC limit is not measured.
 
 ## 4. Known limitations
 
@@ -137,7 +165,7 @@ many medium boosts, not from the 160–190 A peaks.
   coupling beyond the 3 nodes, no tab/busbar hot spot at the sensor.
 * Lap is synthetic; driver behaviour is a single grip factor; no
   tyre-temperature or fuel-mass change; gear shifts are instantaneous.
-* ESC/motor efficiency is a constant (0.85 drive / 0.75 regen).
+* Motor and ESC losses and thermal parameters (`emDrive.ts`) are estimates.
 * ICE torque curve is the 2025 dyno curve; fuel uses a flat 300 g/kWh BSFC.
 
 ## 5. Tests that would calibrate the model
