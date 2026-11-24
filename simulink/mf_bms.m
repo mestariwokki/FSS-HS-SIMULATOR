@@ -28,7 +28,8 @@ if charging
 else
     t_lo = P.bms.t_dis_min; t_hi = P.bms.t_dis_max;
 end
-if T_C > t_hi || T_C < t_lo, ot = ot + dt; else, ot = 0; end
+T_s = T_C(1);   % hot-cell surface = BMS sensor (EV5.8.5)
+if T_s > t_hi || T_s < t_lo, ot = ot + dt; else, ot = 0; end
 if I > P.bms.i_dis_cont, dp = dp + dt; else, dp = 0; end
 if I_chg > P.bms.i_chg_cont, cp = cp + dt; else, cp = 0; end
 
