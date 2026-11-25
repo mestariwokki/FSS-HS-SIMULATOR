@@ -101,7 +101,7 @@ P.em.kV        = 104;      % RPM/V
 P.em.Kt        = 60 / (2*pi*P.em.kV);   % Nm/A
 P.em.I_peak    = 7.5 / P.em.Kt;   % A per motor: 7.5 Nm motor maximum (HSF Table 6.2, ≈ 82 A)
 P.em.I_cont    = 7.5 / P.em.Kt;   % motor peak = nominal 85 A in the HSF; ESC 86 A cont is above it
-P.em.eta       = 0.88;     % ESC + winding
+P.em.eta       = 0.78;     % ESC + winding; Neumotors Rm 0.086 Ohm gives ~78 % (web model emDrive.ts)
 P.em.gear      = 3.0;
 P.em.boost_s   = 5.0;      % peak power allowed for 5 s
 
