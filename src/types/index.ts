@@ -106,6 +106,7 @@ export interface BatteryDataPoint {
   i_bat: number;
   p_inst: number;
   T_C: number;
+  ambient_C: number;
   eta_pos: number;
   eta_neg: number;
   wh_out: number;
@@ -165,6 +166,7 @@ export type SimMode = 'const' | 'profile' | 'charge';
 export type MotorMode = 'const' | 'profile' | 'regen' | 'acc75';
 
 export interface ProfileStep {
+  ambient_C?: number;
   duration_s: number;
   current_A: number;
 }

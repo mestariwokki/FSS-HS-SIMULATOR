@@ -2,6 +2,7 @@ import type { SimMode, ProfileStep, PackConfig } from '../types';
 
 export interface CurrentParams {
   mode: SimMode;
+  ambient_C?: number;
   // Const mode
   current_A: number;
   duration_s: number;
@@ -15,6 +16,7 @@ export interface CurrentParams {
 }
 
 export interface CurrentResult {
+  ambient_C?: number;
   i: number;
   done: boolean;
   cv_t_start: number | null;
@@ -29,6 +31,7 @@ export function getNextCurrent(
   if (params.mode === 'const') {
     return {
       i: params.current_A,
+      ambient_C: params.ambient_C,
       done: t >= params.duration_s,
       cv_t_start: params.cv_t_start,
     };
@@ -39,7 +42,7 @@ export function getNextCurrent(
     for (const s of params.profileSteps) {
       elapsed += s.duration_s;
       if (t < elapsed) {
-        return { i: s.current_A, done: false, cv_t_start: params.cv_t_start };
+        return { i: s.current_A, ambient_C: s.ambient_C ?? params.ambient_C, done: false, cv_t_start: params.cv_t_start };
       }
     }
     return { i: 0, done: true, cv_t_start: params.cv_t_start };
@@ -55,7 +58,7 @@ export function getNextCurrent(
 
     // CC phase: constant negative current (charging)
     if (v_t < v_max - 0.05) {
-      return { i: -cc, done: false, cv_t_start: params.cv_t_start };
+      return { i: -cc, ambient_C: params.ambient_C, done: false, cv_t_start: params.cv_t_start };
     }
 
     // CV phase: current decays to keep V at V_max
@@ -66,7 +69,7 @@ export function getNextCurrent(
     if (Math.abs(i_cv) < cut) {
       return { i: 0, done: true, cv_t_start: cv_start };
     }
-    return { i: i_cv, done: false, cv_t_start: cv_start };
+    return { i: i_cv, ambient_C: params.ambient_C, done: false, cv_t_start: cv_start };
   }
 
   return { i: 0, done: true, cv_t_start: params.cv_t_start };
