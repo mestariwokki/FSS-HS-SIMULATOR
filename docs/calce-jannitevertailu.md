@@ -1,6 +1,8 @@
 # CALCE-jännitevertailu 25 °C:ssa
 
-Sovitus käyttää Samsung INR18650-20R -kennon SP20-3 kahdeksaa 1 A:n purkupulssia (720 s) ja niiden lepoja. Lepojen viimeisistä jännitteistä muodostetaan paloittain lineaarinen OCV purkautuneiden ampeerituntien funktiona. Kummallakin mallilla on sama OCV sekä samat sovitusnäytteet. Pulssit säilytetään kokonaisina. Lepojen 60 ensimmäisen näytteen jälkeen sovitus käyttää joka 30. näytettä ja viimeistä näytettä.
+Sovitus käyttää Samsung INR18650-20R -kennon SP20-3 kahdeksaa 1 A:n purkupulssia (720 s) ja niiden lepoja. Lepojen viimeisistä jännitteistä muodostetaan paloittain lineaarinen OCV purkautuneiden ampeerituntien funktiona. Lepopisteiden käyttö seuraa Zhengin ym. tutkimuksen inkrementaalista OCV-menetelmää. [Zheng ym. 2016](https://www.sciencedirect.com/science/article/pii/S0306261916313125)
+
+Kummallakin mallilla on sama OCV sekä samat sovitusnäytteet. Pulssit säilytetään kokonaisina. Lepojen 60 ensimmäisen näytteen jälkeen sovitus käyttää joka 30. näytettä ja viimeistä näytettä.
 
 Napajännite on U(ΔAh) − I R₀ − Σvⱼ ja haaran muutos on vⱼ(t+Δt) = vⱼ(t)e^(−Δt/τⱼ) + IRⱼ(1−e^(−Δt/τⱼ)). Positiivinen I purkaa. Käytämme näytteen virtaa edeltävän välin pitovirtana, ja OCV:n argumentti tulee mittalaitteen Ah-laskureista. Resistanssit rajattiin välille 0–0,5 Ω ja aikavakiot 0,2–2 000 s.
 
@@ -31,6 +33,7 @@ Lataa alla olevat arkistot samaan hakemistoon. Ohjelma tulostaa niiden SHA-256-t
 ```sh
 python -m pip install numpy pandas scipy openpyxl xlrd
 python scripts/compare_calce_voltage.py /polku/aineistoihin
+python scripts/compare_calce_voltage.py /polku/aineistoihin --split-tau
 npm test
 npm run build
 ```

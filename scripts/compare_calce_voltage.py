@@ -56,7 +56,7 @@ def print_metrics(label, prediction, measured, dt, current):
           f"nettoenergia={energy[1]:.6f} / {energy[0]:.6f} Wh")
 
 
-def main(directory):
+def main(directory, split_tau):
     pulses = read_channel(directory, "SP3_25C_IC_OCV_12_2_2015.zip",
                           "12_2_2015_Incremental OCV test_SP20-3.xlsx", 1)
     # Complete discharge pulses and the full intervening rests in the first sheet.
@@ -74,9 +74,14 @@ def main(directory):
         parts.append(stage)
     training = trace(pd.concat(parts), curve)
     fits = {}
+    second_order_bounds = (
+        ([0, 0, 0.2, 0, 20], [0.5, 0.5, 20, 0.5, 2000])
+        if split_tau else
+        ([0, 0, 0.2, 0, 0.2], [0.5, 0.5, 2000, 0.5, 2000])
+    )
     for count, initial, lower, upper in [
         (1, [0.08, 0.05, 40], [0, 0, 0.2], [0.5, 0.5, 2000]),
-        (2, [0.08, 0.03, 5, 0.04, 100], [0, 0, 0.2, 0, 0.2], [0.5, 0.5, 2000, 0.5, 2000]),
+        (2, [0.08, 0.03, 5, 0.04, 100], *second_order_bounds),
     ]:
         fit = least_squares(lambda p: predict(p, training) - training[2], initial,
                             bounds=(lower, upper))
@@ -111,4 +116,7 @@ def main(directory):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
-    main(parser.parse_args().directory)
+    parser.add_argument("--split-tau", action="store_true",
+                        help="Rajaa nopea ja hidas aikavakio 20 sekunnin eri puolille")
+    args = parser.parse_args()
+    main(args.directory, args.split_tau)
