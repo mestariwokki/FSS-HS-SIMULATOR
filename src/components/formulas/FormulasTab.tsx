@@ -80,9 +80,10 @@ export function FormulasTab() {
       {/* Thermal */}
       <div style={HEADING}>Thermal Model</div>
       <div style={MONO}>
-        Q_joule = I^2 * R_pack<br />
-        Q_rev = I * T * (dU_pos/dT - dU_neg/dT)<br />
-        dT/dt = (Q_joule + Q_rev - UA*(T - T_amb)) / mCp
+        Q_joule = I_pack^2 * R_eff<br />
+        Q_RC = V_RC1^2 / R1_pack + V_RC2^2 / R2_pack (step average)<br />
+        Q_rev = -N_series * I_pack * T * (dU_pos/dT - dU_neg/dT)<br />
+        dT/dt = (Q_joule + Q_RC + Q_rev - UA*(T - T_amb)) / mCp
       </div>
 
       {/* Coulomb counting */}

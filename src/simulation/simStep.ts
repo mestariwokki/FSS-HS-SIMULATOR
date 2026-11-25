@@ -3,11 +3,12 @@ import {
   F, R_GAS, T_REF,
   D_S_POS, R_P_POS, K_POS, C_MAX_POS, EPS_POS, L_POS,
   D_S_NEG, R_P_NEG, K_NEG, C_MAX_NEG, EPS_NEG, L_NEG,
-  ALPHA, C_E, DU_DT_POS, DU_DT_NEG, E_D, E_K,
+  ALPHA, C_E, E_D, E_K,
   A_POS, A_NEG, A_CELL,
 } from './constants';
 import { U_pos, U_neg } from './ocv';
 import { arrhenius } from './spm';
+import { jouleHeat, rcHeatW, stepThermal } from './thermal';
 
 export interface SimStepResult {
   state: SimState;
@@ -105,10 +106,14 @@ export function simStep(
   const t = state.t + dt;
 
   // Thermal model
-  const Q_j = i_bat * i_bat * pack.resistance_Ohm;
-  const Q_r = I_cell * T * (DU_DT_POS - DU_DT_NEG);
-  const Q_c = pack.coolingUA_WK * (T - T_REF);
-  const T_K = Math.max(T_REF, T + (Q_j + Q_r - Q_c) / pack.thermalMass_JK * dt);
+  const Q_j = jouleHeat(i_bat, R_eff);
+  const polarizationHeat =
+    rcHeatW(state.V_RC, i_bat, R1_pack, ecm.tau1_s, dt) +
+    rcHeatW(state.V_RC2, i_bat, R2_pack, ecm.tau2_s, dt);
+  const T_K = stepThermal(
+    T, i_bat, I_cell, R_eff, T_REF, pack.thermalMass_JK,
+    pack.coolingUA_WK, dt, pack.series * pack.parallel, polarizationHeat,
+  );
 
   const newState: SimState = {
     t,

@@ -17,11 +17,10 @@ describe('stepThermal', () => {
     expect(T1).toBeGreaterThan(T0);
   });
 
-  it('temperature cannot drop below ambient', () => {
-    // Artificially start below ambient (should not happen in practice)
+  it('a cold pack warms continuously toward ambient at rest', () => {
     const T_cold = T_AMB - 10;
     const T_next = stepThermal(T_cold, 0, 0, 0.024, T_AMB, MCP, HA, 0.1);
-    expect(T_next).toBeGreaterThanOrEqual(T_AMB);
+    expect(T_next).toBeCloseTo(T_AMB - 10 * Math.exp(-HA * 0.1 / MCP), 10);
   });
 
   it('cooling pulls temperature toward ambient over time', () => {
