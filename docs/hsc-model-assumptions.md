@@ -170,6 +170,30 @@ Hub motors and VESC_FSO as in `emDrive.ts` (FDD86367-F085, 4 per switch,
 gear 3.5 3.830 s; 120 A 3.798 s at the 198 A HSC limit; 120 A + gear 3.5
 3.776 s.
 
+### Configuration search (`node scripts/optimise-hybrid.mjs 150`, full output in `optimisation-2026-11-25.txt`)
+
+672 configurations: hub gear 2.5–4.0, VESC motor current for the short
+events (75 m + autocross) and for endurance 60–120 A (torque saturates above
+85 A, k_sat 0.3–0.7), VESC motor-temperature limit 85–100 … 130–145 °C.
+Scored as FS points (acceleration 50, autocross 100, endurance 250; assumed
+winner times 3.6 s / 60 s / 1300 s). A configuration is infeasible if the
+BMS trips, the winding passes 160 °C, or back-EMF reaches the HSC voltage
+within 5 km/h of the top speed (75 m at full charge, endurance at the end
+SOC). Monte Carlo over 10 uncertain inputs (motor cooling ×0.5–1.5, winding
+→ case R, Rm ±10 %, k_sat, Io, ESC R and cooling, HSC UA ×0.6–1.4, cell R
+×0.9–1.3, T_amb 20–35 °C), 150 samples, common random numbers.
+
+| Configuration | Mean gain vs HSF baseline | P10 | Infeasible |
+|---|---|---|---|
+| gear 3.25, 120 A / 120 A, 85–100 °C | +2.46 pts | +1.92 | 37 % (back-EMF) |
+| **gear 3.0, 120 A / 120 A, 115–130 °C** | **+1.87 pts** | **+1.30** | **0 %** |
+| gear 3.0, 120 A / 120 A, 130–145 °C | +1.86 pts | +1.24 | 0 % (motor P90 140 °C) |
+| gear 2.75, 120 A / 120 A, 130–145 °C | +1.02 pts | +0.47 | 0 % |
+| baseline gear 3.0, 86 A / 86 A, 85–100 °C | 0 | 0 | 0 % |
+
+Gears 3.5 and above are infeasible in the nominal case. 1 kg of car mass is
+worth about 0.3 pts (0.25 s endurance, 4 ms in the 75 m).
+
 ## 4. Known limitations
 
 * OCV curve, R(T, SOC), RC split and all thermal UA/C are estimates.
@@ -177,7 +201,7 @@ gear 3.5 3.830 s; 120 A 3.798 s at the 198 A HSC limit; 120 A + gear 3.5
   coupling beyond the 3 nodes, no tab/busbar hot spot at the sensor.
 * Lap is synthetic; driver behaviour is a single grip factor; no
   tyre-temperature or fuel-mass change; gear shifts are instantaneous.
-* Motor and ESC losses and thermal parameters (`emDrive.ts`) are estimates.
+* Motor copper/iron loss from the Neumotors datasheet; torque saturation above 85 A, motor and ESC thermal parameters (`emDrive.ts`) are estimates.
 * ICE torque curve is the 2025 dyno curve; fuel uses a flat 300 g/kWh BSFC.
 
 ## 5. Tests that would calibrate the model
