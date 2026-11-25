@@ -102,39 +102,26 @@ stack are close to adiabatic.
 
 ### Results (defaults, T_amb 30 °C, start 95 % SOC, hub motors from `motor/emDrive.ts`)
 
-The hub motors' 7.5 Nm limit (≈ 82 A phase) caps the EM force at about
-210 N at the wheels. That, not the HSC, now sets how much boost there is:
-auto deployment reaches k = 1 with SOC to spare.
+Motor data from the Neumotors 65xx datasheet (6530/8.5/104: Rm 0.086 Ω,
+Kt 92 mNm/A, 85 A saturation). With the real winding resistance the drive
+runs at ~78 % battery → wheel efficiency, and the motor windings reach the
+VESC default motor-temperature limit (85 → 100 °C) after about 10 laps.
+From there the VESC cuts the current back (≈ 310 s of derating per race).
+The motor temperature, not the HSC or the ESC, limits the boost.
 
-| Concept | k (auto) | I_rms | I_peak | T sensor max | T core max | SOC end |
-|---|---|---|---|---|---|---|
-| A | 1.00 | 59 A | 144 A | 47.9 °C | 49.0 °C | 29 % |
-| B | 1.00 | 60 A | 144 A | 42.3 °C | 43.4 °C | 35 % |
-| C | 1.00 | 60 A | 144 A | 37.7 °C | 38.9 °C | 35 % |
+| Concept | I_rms | I_peak | T sensor max | T core max | SOC end |
+|---|---|---|---|---|---|
+| A | 44 A | 153 A | 39.7 °C | 40.1 °C | 50 % |
+| B | 44 A | 153 A | 36.3 °C | 36.8 °C | 50 % |
+| C | 44 A | 154 A | 33.8 °C | 34.3 °C | 50 % |
 
-Endurance gain vs ICE only: 9.3 s over 21 laps (≈ 0.44 s/lap). Motor
-winding max 69 °C, ESC 41 °C, no thermal derating. Mean efficiency 88 %
-battery → wheel, 86.5 % wheel → battery.
+Motor winding max 93 °C, ESC 36 °C. Endurance gain vs ICE only ≈ 7.3 s.
+75 m: 3.846 s vs 3.968 s ICE only, 161 A peak.
 
-Sensitivity for concept A:
-
-| Case | I_rms | T sensor max | SOC end |
-|---|---|---|---|
-| k = 0.5 | 33 A | 36.2 °C | 79 % |
-| k = 0.7 | 43 A | 39.3 °C | 62 % |
-| auto, ESC limited to 100 A | 54 A | 44.4 °C | 40 % |
-| auto, T_amb 25 °C | 59 A | 44.5 °C | 33 % |
-| auto, T_amb 35 °C | 58 A | 52.0 °C | 22 % |
-
-Acceleration 75 m (95 % SOC, 25 °C): 3.84 s hybrid vs 3.96 s ICE only,
-144 A peak, weakest cell 4.13 V. At 30 % SOC and 5 °C: 3.84 s, 156 A,
-weakest cell 3.37 V, no trip.
-
-**Reading:** the endurance RMS current is about 60 A, above the 40 A that
-the concept document took as safe for passive cooling. Passive concept A
-still stays 10 °C below the 58 °C BMS limit at 30 °C ambient, and 6 °C below
-it at 35 °C. The earlier 65–73 A / BMS-trip numbers assumed 100 A × Kt of
-motor torque, which the 7.5 Nm motor rating does not allow.
+**Reading:** the HSC has thermal and energy margin left; half the charge is
+unused. The motor thermal path (case → hub/upright air) is an estimate, so
+measure the winding temperature in a constant-torque run before relying on
+the derating time.
 
 ### Gear ratio (`node scripts/gear-sweep.mjs 2.5 3 3.5 4`)
 
@@ -168,17 +155,20 @@ endurance the cells' own heat capacity matters more than the fan.
 Hub motors and VESC_FSO as in `emDrive.ts` (FDD86367-F085, 4 per switch,
 4.2 mΩ max each → R_esc ≈ 3–4 mΩ incl. shunt and PCB).
 
-| Case | I_rms | I_peak | T sensor max | SOC end | Endurance gain |
-|---|---|---|---|---|---|
-| 30 °C | 59 A | 144 A | 46.0 °C | 30 % | 9.2 s |
-| 35 °C | 58 A | 144 A | 50.2 °C | 23 % | 9.2 s |
-| 30 °C, fan failure | 59 A | 144 A | 46.6 °C | 30 % | 9.2 s |
-| 30 °C, R_hsc 2.0 mΩ | 59 A | 144 A | 46.4 °C | 30 % | 9.2 s |
-| 30 °C, gear 3.5 | 62 A | 145 A | 48.3 °C | 23 % | 10.3 s |
-| 30 °C, motor + VESC 120 A | 66 A | 163 A | 51.6 °C | 15 % (k 0.76) | 10.2 s |
+| Case | I_rms | I_peak | T sensor max | SOC end | Motor max | Derated | Endurance gain |
+|---|---|---|---|---|---|---|---|
+| 30 °C | 44 A | 153 A | 38.5 °C | 50 % | 93 °C | 314 s | 7.3 s |
+| 35 °C | 42 A | 152 A | 41.8 °C | 53 % | 93 °C | 333 s | 7.0 s |
+| 30 °C, fan failure | 44 A | 153 A | 38.9 °C | 50 % | 93 °C | 314 s | 7.3 s |
+| 30 °C, motor limit 85 A (saturation) | 44 A | 161 A | 38.6 °C | 50 % | 93 °C | 323 s | 7.5 s |
+| 30 °C, VESC motor-temp limit 130 → 150 °C | 61 A | 180 A | 48.5 °C | 20 % | 138 °C | 178 s | 8.5 s |
+| 30 °C, VESC limited to 60 A | 41 A | 113 A | 37.7 °C | 53 % | 90 °C | 221 s | 6.2 s |
+| 30 °C, gear 3.5 | 48 A | 164 A | 40.3 °C | 47 % | 92 °C | 253 s | 8.4 s |
+| 30 °C, motor + VESC 120 A | 46 A | 198 A | 39.4 °C | 49 % | 95 °C | 331 s | 9.3 s |
 
-75 m: 3.846 s (ICE only 3.968 s); gear 3.5 3.830 s; 120 A 3.794 s at the
-198 A HSC limit; 120 A + gear 3.5 3.772 s.
+75 m: 3.846 s (ICE only 3.968 s); 85 A 3.842 s; VESC 60 A 3.878 s;
+gear 3.5 3.830 s; 120 A 3.798 s at the 198 A HSC limit; 120 A + gear 3.5
+3.776 s.
 
 ## 4. Known limitations
 

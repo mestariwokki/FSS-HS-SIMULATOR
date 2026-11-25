@@ -6,19 +6,23 @@
  * Per motor, at wheel force share F and speed v:
  *   motor torque  T_m = F·r / (gear·η_gear)       (motoring; ×η_gear² on regen)
  *   phase current I   = T_m / Kt
- *   copper loss       = I²·R_w
- *   iron/friction     = I0 · V_bemf                (no-load current model)
+ *   copper loss       = I²·R_w·(1 + 0.00393·(T_wind − 25))
+ *   iron/friction     = I0(V)·V_bemf, I0(V) = I0_10V·√(V_bemf/10 V)
  *   ESC loss          = I²·R_esc + k_sw·V_dc·|I| + P_fixed
  *   P_elec            = P_mech + all losses        (P_mech < 0 on regen)
  *
  * Limits (HSF 2026, Tables 5.1 and 6.2):
  *   motor 7.5 Nm max, 85 A peak/nominal, 3.5 kW cont / 7 kW peak
+ *   Neumotors 65xx datasheet (2023-10), row 6530/8.5/104: Kt 92.0 mNm/A,
+ *   Rm 0.086 Ω (terminal), Io 0.577 A @ 10 V, 85 A saturation, 115 V,
+ *   12 000 rpm; continuous rating = housing below 100 °C, winding max 180 °C.
  *   ESC 86 A cont, 100 A for 5 s, 6.88 kW cont, 8 kW for 5 s, passive cooling,
  *   mounted in the side floors out of the airflow
  * Thermal derating follows the VESC firmware defaults (linear current
  * cut-back between start and end temperature, 85 → 100 °C).
  *
- * R_w, I0, the ESC loss terms and all thermal values are ESTIMATES. A dyno
+ * The ESC loss terms and all thermal values are ESTIMATES (R_esc from
+ * FDD86367-F085, 4.2 mΩ max, 4 in parallel per switch, plus shunt and PCB). A dyno
  * run (efficiency map) and a 10 min constant-torque run with a thermocouple
  * on the stator and on the ESC FETs would replace them.
  */
@@ -36,8 +40,8 @@ export interface EmDriveParams {
   esc_peak_s: number;      // … for 5 s
   P_esc_cont_W: number;    // HSF 6.88 kW
   P_esc_peak_W: number;    // HSF 8 kW for 5 s
-  R_w_Ohm: number;         // estimate, phase-equivalent winding resistance
-  I0_A: number;            // estimate, no-load current
+  R_w_Ohm: number;         // terminal resistance at 25 °C (datasheet Rm)
+  I0_A: number;            // no-load current at 10 V (datasheet Io)
   R_esc_Ohm: number;       // estimate, FET + shunt conduction
   k_sw: number;            // estimate, switching loss [W/(V·A)]
   P_esc_fixed_W: number;   // estimate, gate drive + MCU
@@ -59,15 +63,15 @@ export function defaultEmDrive(): EmDriveParams {
     kV: 104,
     gear: 3.0,
     eta_gear: 0.97,
-    T_motor_max_Nm: 7.5,
+    T_motor_max_Nm: 7.5,     // HSF; 85 A saturation × Kt = 7.8 Nm
     I_motor_max_A: 85,
     I_esc_cont_A: 86,
     I_esc_peak_A: 100,
     esc_peak_s: 5,
     P_esc_cont_W: 6880,
     P_esc_peak_W: 8000,
-    R_w_Ohm: 0.020,
-    I0_A: 2.5,
+    R_w_Ohm: 0.086,
+    I0_A: 0.577,
     R_esc_Ohm: 0.0035,
     k_sw: 0.0015,
     P_esc_fixed_W: 3,
@@ -142,7 +146,7 @@ export interface EmOperatingPoint {
  * Electrical power for a total wheel force F (> 0 drive, < 0 regen) at speed v.
  */
 export function emOperatingPoint(
-  p: EmDriveParams, F_wheel: number, v: number, V_dc: number, wheel_r: number,
+  p: EmDriveParams, F_wheel: number, v: number, V_dc: number, wheel_r: number, T_wind_C = 25,
 ): EmOperatingPoint {
   if (F_wheel === 0) return { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 };
   const Kt = kVtoKt(p.kV);
@@ -153,8 +157,8 @@ export function emOperatingPoint(
     : T_wheel_each * p.eta_gear / p.gear;
   const I = Math.abs(T_m) / Kt;
   const V_bemf = w_m / kVradFromKv(p.kV);
-  const P_cu = I * I * p.R_w_Ohm;
-  const P_fe = p.I0_A * V_bemf;
+  const P_cu = I * I * p.R_w_Ohm * (1 + 0.00393 * (T_wind_C - 25));
+  const P_fe = p.I0_A * Math.sqrt(Math.max(0, V_bemf) / 10) * V_bemf;
   const P_m_loss = P_cu + P_fe;
   const P_e_loss = I * I * p.R_esc_Ohm + p.k_sw * V_dc * I + p.P_esc_fixed_W;
   const P_mech_m = T_m * w_m;
