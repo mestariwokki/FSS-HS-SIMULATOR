@@ -194,6 +194,23 @@ SOC). Monte Carlo over 10 uncertain inputs (motor cooling ×0.5–1.5, winding
 Gears 3.5 and above are infeasible in the nominal case. 1 kg of car mass is
 worth about 0.3 pts (0.25 s endurance, 4 ms in the 75 m).
 
+### VESC_FSO R2 data (design report + PCB HW test report, 2026-11-25)
+
+* ESC cooling now from the R2 heat-sink calculator: passive junction-to-ambient
+  0.28–0.59 W/K over sink options 1–4 (0.7–1.3 W/K only with 30 km/h forced
+  air; the VESCs sit out of the airflow). Default 0.5 W/K (option 1), Monte
+  Carlo 0.28–0.59 W/K. Heat capacity 250 J/K (estimate, sink top + bottom).
+* FET Rds(on) temperature coefficient +0.38 %/K (FDD86367-F085, 4.2 → 6.6 mΩ).
+* Result: ESC max 47 °C (recommended setup, 30 °C), under the VESC 85 °C
+  derate start and the 112 °C Tj target even at the worst sink option. The
+  ranking and points of the configuration search did not change; the motor
+  winding remains the limit.
+* The PCB HW test report covers shorts and supply rails only (3 of 5 DUTs
+  filled in), so the power stage is still unmeasured.
+* HSC peak current in endurance is about 180–200 A at high speed, not 250 A
+  at standstill: at low speed the phase current is high but the battery
+  current (≈ P/V) is low.
+
 ## 4. Known limitations
 
 * OCV curve, R(T, SOC), RC split and all thermal UA/C are estimates.

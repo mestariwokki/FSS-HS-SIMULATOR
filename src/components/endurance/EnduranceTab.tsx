@@ -49,7 +49,7 @@ export function EnduranceTab() {
   const [ClA, setClA] = useState(0);
   const [mass, setMass] = useState(285);
   const [Tmot, setTmot] = useState(7.5);
-  const [Gesc, setGesc] = useState(1.3);
+  const [Gesc, setGesc] = useState(0.5);
   const [laps, setLaps] = useState(21);
   const [Rint, setRint] = useState(1.2);
   const [weakR, setWeakR] = useState(10);

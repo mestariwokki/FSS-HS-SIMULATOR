@@ -5,6 +5,7 @@
 // events (acceleration + autocross profile). HSC = HSC v2 rev0.2.
 // Score = FS points from acceleration (50), autocross (100) and endurance (250)
 // with assumed winner times; only differences between configurations matter.
+// ESC cooling uncertainty = VESC_FSO R2 passive heat-sink options 1–4 (0.28–0.59 W/K).
 import { createServer } from 'vite';
 const s = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const H = await s.ssrLoadModule('/src/simulation/endurance/hscEndurance.ts');
@@ -28,7 +29,7 @@ const nominal = () => ({ Gc: 1, Rwc: 1, Rm: 1, ksat: 0.5, I0: 1, Resc: 1, Gesc: 
 function sample(rng) {
   const u = (a, b) => a + (b - a) * rng();
   return { Gc: u(0.5, 1.5), Rwc: u(0.7, 1.5), Rm: u(0.9, 1.1), ksat: u(0.3, 0.7), I0: u(0.7, 2.0),
-    Resc: u(0.7, 1.4), Gesc: u(0.6, 1.4), UA: u(0.6, 1.4), Rcell: u(0.9, 1.3), Tamb: u(20, 35) };
+    Resc: u(0.7, 1.4), Gesc: u(0.56, 1.18), UA: u(0.6, 1.4), Rcell: u(0.9, 1.3), Tamb: u(20, 35) };
 }
 function vehicle(unc, g, I, Tl) {
   const b = H.defaultVehicle();

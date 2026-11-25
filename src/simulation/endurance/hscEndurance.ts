@@ -492,14 +492,14 @@ function simulateEvent(
         const F_cap = emWheelForce(veh, p.vm, V_now, I_lim, em.esc_peak_t < veh.em.esc_peak_s);
         let F = Math.sign(p.F_em_N) * Math.min(Math.abs(p.F_em_N), F_cap);
         if (Math.abs(F) < Math.abs(p.F_em_N) - 1e-6) emDer += dt;
-        op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m, em.T_wind_C);
+        op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m, em.T_wind_C, em.T_esc_C);
         const I_req = currentForPower(ps, pack, op.P_elec_W, T_mean);
         const r = limitCurrent(ps, pack, strat, I_req, T_mean);
         I = r.I;
         if (r.derated) {
           derate += dt;
           F *= I_req !== 0 ? I / I_req : 0;
-          op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m, em.T_wind_C);
+          op = emOperatingPoint(veh.em, F, p.vm, V_now, veh.wheel_r_m, em.T_wind_C, em.T_esc_C);
         }
         const Pw = F * p.vm * dt;
         if (F > 0) { Ewheel_d += Pw; Eel_d += op.P_elec_W * dt; }
@@ -672,13 +672,13 @@ export function runAcceleration(
     let F_em = tr.F_em;
     let op: EmOperatingPoint = { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 };
     if (live && F_em > 0) {
-      op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m, em.T_wind_C);
+      op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m, em.T_wind_C, em.T_esc_C);
       const I_req = currentForPower(ps, pack, op.P_elec_W, T_m);
       const r = limitCurrent(ps, pack, strat, I_req, T_m);
       I = r.I;
       if (r.derated && I_req > 0) {
         F_em *= I / I_req;
-        op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m, em.T_wind_C);
+        op = emOperatingPoint(veh.em, F_em, v, e0.V_esc, veh.wheel_r_m, em.T_wind_C, em.T_esc_C);
       }
     }
     em = stepEmThermal(veh.em, em, op, v, T0_C, dt);

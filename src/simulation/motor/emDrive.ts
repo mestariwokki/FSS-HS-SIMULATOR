@@ -22,9 +22,15 @@
  * cut-back between start and end temperature, 85 → 100 °C).
  *
  * The ESC loss terms and all thermal values are ESTIMATES (R_esc from
- * FDD86367-F085, 4.2 mΩ max, 4 in parallel per switch, plus shunt and PCB). A dyno
- * run (efficiency map) and a 10 min constant-torque run with a thermocouple
- * on the stator and on the ESC FETs would replace them.
+ * FDD86367-F085, 4.2 mΩ max at 25 °C, 6.6 mΩ at 175 °C → +0.38 %/K, 4 in
+ * parallel per switch, plus 200 µΩ shunt and PCB). ESC cooling comes from the
+ * VESC_FSO R2 design report heat-sink calculator: passive (VESC out of the
+ * airflow) junction-to-ambient 0.28–0.59 W/K over sink options 1–4, 0.7–1.3 W/K
+ * only with 30 km/h forced air. Default = option 1 passive, 0.5 W/K.
+ * The VESC PCB HW test report (2026) covers shorts and supply rails only, so
+ * no measured power-stage data exists yet. A dyno run (efficiency map) and a
+ * 10 min constant-torque run with a thermocouple on the stator and on the ESC
+ * FETs would replace these values.
  */
 import { kVtoKt, kVradFromKv } from './motorConstants';
 
@@ -45,7 +51,8 @@ export interface EmDriveParams {
   P_esc_peak_W: number;    // HSF 8 kW for 5 s
   R_w_Ohm: number;         // terminal resistance at 25 °C (datasheet Rm)
   I0_A: number;            // no-load current at 10 V (datasheet Io)
-  R_esc_Ohm: number;       // estimate, FET + shunt conduction
+  R_esc_Ohm: number;       // estimate, FET + shunt conduction at 25 °C
+  alpha_Resc: number;      // FET Rds(on) temperature coefficient [1/K]
   k_sw: number;            // estimate, switching loss [W/(V·A)]
   P_esc_fixed_W: number;   // estimate, gate drive + MCU
   // Thermal (per motor / per ESC)
@@ -78,6 +85,7 @@ export function defaultEmDrive(): EmDriveParams {
     R_w_Ohm: 0.086,
     I0_A: 0.577,
     R_esc_Ohm: 0.0035,
+    alpha_Resc: 0.0038,      // FDD86367-F085: 4.2 → 6.6 mΩ, 25 → 175 °C
     k_sw: 0.0015,
     P_esc_fixed_W: 3,
     C_wind_JK: 120,
@@ -85,8 +93,8 @@ export function defaultEmDrive(): EmDriveParams {
     C_case_JK: 450,
     G_case_amb0_WK: 1.2,
     G_case_amb_kv: 0.25,
-    C_esc_JK: 150,
-    G_esc_amb_WK: 1.3,
+    C_esc_JK: 250,           // estimate: Al heat sink top + bottom (~300 g) + PCB
+    G_esc_amb_WK: 0.5,       // VESC_FSO R2 report, sink option 1, passive
     T_motor_derate_C: [85, 100],
     T_esc_derate_C: [85, 100],
   };
@@ -166,6 +174,7 @@ export interface EmOperatingPoint {
  */
 export function emOperatingPoint(
   p: EmDriveParams, F_wheel: number, v: number, V_dc: number, wheel_r: number, T_wind_C = 25,
+  T_esc_C = 25,
 ): EmOperatingPoint {
   if (F_wheel === 0) return { P_elec_W: 0, I_phase_A: 0, P_loss_motor_W: 0, P_loss_esc_W: 0, eta: 0 };
   const w_m = Math.max(0.1, v) / wheel_r * p.gear;
@@ -178,7 +187,8 @@ export function emOperatingPoint(
   const P_cu = I * I * p.R_w_Ohm * (1 + 0.00393 * (T_wind_C - 25));
   const P_fe = p.I0_A * Math.sqrt(Math.max(0, V_bemf) / 10) * V_bemf;
   const P_m_loss = P_cu + P_fe;
-  const P_e_loss = I * I * p.R_esc_Ohm + p.k_sw * V_dc * I + p.P_esc_fixed_W;
+  const R_esc = p.R_esc_Ohm * (1 + (p.alpha_Resc ?? 0) * (T_esc_C - 25));
+  const P_e_loss = I * I * R_esc + p.k_sw * V_dc * I + p.P_esc_fixed_W;
   const P_mech_m = T_m * w_m;
   const P_elec_each = P_mech_m + P_m_loss + P_e_loss;
   const P_wheel = F_wheel * Math.max(0.1, v);

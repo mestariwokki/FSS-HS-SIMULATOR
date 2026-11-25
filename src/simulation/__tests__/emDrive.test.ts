@@ -50,6 +50,12 @@ describe('hub motor + ESC drive', () => {
     expect(emMaxWheelForce(p, v_nl * 1.01, 50, r, 80, true)).toBe(0);
   });
 
+  it('ESC conduction loss rises with FET temperature (Rds(on) +0.38 %/K)', () => {
+    const cold = emOperatingPoint(p, 400, 5, 52, r, 25, 25).P_loss_esc_W;
+    const hot = emOperatingPoint(p, 400, 5, 52, r, 25, 100).P_loss_esc_W;
+    expect(hot).toBeGreaterThan(cold * 1.1);
+  });
+
   it('VESC-style derating between 85 and 100 °C', () => {
     expect(emDerate(p, { ...initEmThermal(25), T_wind_C: 80 })).toBe(1);
     expect(emDerate(p, { ...initEmThermal(25), T_wind_C: 92.5 })).toBeCloseTo(0.5, 6);
