@@ -62,12 +62,9 @@ export function useBatterySim() {
 
     for (let k = 0; k < stepsPerFrame; k++) {
       const params = paramsRef.current!;
-      const lastVt = dataRef.current.length > 0
-        ? dataRef.current[dataRef.current.length - 1].v_t
-        : p.v_nom;
-
-      const result = getNextCurrent(st.t, lastVt, params, p);
-      paramsRef.current = { ...params, cv_t_start: result.cv_t_start };
+      const result = getNextCurrent(st.t, params, p, current =>
+        simStep(st, p, e, current, dt, params.ambient_C).point.v_t,
+      );
 
       if (result.done) {
         const label = params.mode === 'charge' ? 'Charging complete.'
@@ -137,7 +134,7 @@ export function useBatterySim() {
     mode: SimMode,
     soc0_pct: number,
     t0_C: number,
-    currentParams: Omit<CurrentParams, 'cv_t_start'>,
+    currentParams: CurrentParams,
     limits: { oc_limit: number; t_limit: number },
   ) => {
     if (mode === 'charge' && soc0_pct >= 99) {
@@ -151,7 +148,7 @@ export function useBatterySim() {
     statsRef.current = { min_v: 99, max_T: state.T_K, max_eta: 0, max_vsag: 0 };
     packRef.current = pack;
     ecmRef.current = ecm;
-    paramsRef.current = { ...currentParams, cv_t_start: null };
+    paramsRef.current = currentParams;
     limitsRef.current = limits;
 
     setRunning(true);
