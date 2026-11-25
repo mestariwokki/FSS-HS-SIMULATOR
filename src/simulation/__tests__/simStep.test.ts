@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { DU_DT_POS, DU_DT_NEG } from '../constants';
 import { simStep } from '../simStep';
 import { initialConcentrations } from '../ocv';
 import type { SimState, PackConfig, EcmConfig } from '../../types';
@@ -92,6 +93,34 @@ describe('simStep — integration step', () => {
       state = simStep(state, PACK, ECM, 250, 0.1).state;
     }
     expect(state.T_K).toBeGreaterThan(T0);
+  });
+
+  it('uses aged pack resistance for reported ohmic heat', () => {
+    const aged = { ...ECM, soh_res: 1.5 };
+    const { point } = simStep(makeState(), PACK, aged, 30, 0.1);
+    expect(point.Q_j).toBeCloseTo(30 ** 2 * PACK.resistance_Ohm * aged.soh_res);
+  });
+
+  it('converts stored RC energy to heat as a disconnected pack relaxes', () => {
+    const state = { ...makeState(), V_RC: 1, V_RC2: -0.5 };
+    const pack = { ...PACK, coolingUA_WK: 0 };
+    const dt = 2;
+    const next = simStep(state, pack, ECM, 0, dt).state;
+    const scale = pack.series / pack.parallel;
+    const loss1 = ECM.tau1_s / (2 * ECM.R1_Ohm * scale) * (state.V_RC ** 2 - next.V_RC ** 2);
+    const loss2 = ECM.tau2_s / (2 * ECM.R2_Ohm * scale) * (state.V_RC2 ** 2 - next.V_RC2 ** 2);
+    expect((next.T_K - state.T_K) * pack.thermalMass_JK).toBeCloseTo(loss1 + loss2, 8);
+  });
+
+  it('scales reversible heat to all series cells with discharge-positive current', () => {
+    const state = makeState();
+    const pack = { ...PACK, resistance_Ohm: 0, coolingUA_WK: 0 };
+    const ecm = { ...ECM, R1_Ohm: 0, R2_Ohm: 0 };
+    for (const current of [30, -30]) {
+      const next = simStep(state, pack, ecm, current, 1).state;
+      const heat = -pack.series * current * state.T_K * (DU_DT_POS - DU_DT_NEG);
+      expect((next.T_K - state.T_K) * pack.thermalMass_JK).toBeCloseTo(heat, 8);
+    }
   });
 
   it('RC element voltages build up from zero', () => {

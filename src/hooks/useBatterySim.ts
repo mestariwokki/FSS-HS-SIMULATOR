@@ -67,7 +67,7 @@ export function useBatterySim() {
     const state = makeState(soc0_pct / 100, t0_C);
     stateRef.current = state;
     dataRef.current = [];
-    statsRef.current = { min_v: 99, max_T: T_REF, max_eta: 0, max_vsag: 0 };
+    statsRef.current = { min_v: 99, max_T: state.T_K, max_eta: 0, max_vsag: 0 };
     packRef.current = pack;
     ecmRef.current = ecm;
     paramsRef.current = { ...currentParams, cv_t_start: null };
