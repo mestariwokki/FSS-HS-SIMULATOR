@@ -89,7 +89,7 @@ export function EnduranceTab() {
     const t0 = performance.now();
     const { veh, strat, pack, setup } = build();
     const out = {} as Record<Concept, EnduranceResult>;
-    for (const c of ['A', 'B', 'C'] as Concept[]) out[c] = runHscEndurance(veh, strat, pack, setup(c));
+    for (const c of ['A', 'B', 'C', 'V2'] as Concept[]) out[c] = runHscEndurance(veh, strat, pack, setup(c));
     setCmp(out);
     setMs(Math.round(performance.now() - t0));
   };
@@ -110,7 +110,7 @@ export function EnduranceTab() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-          {(['A', 'B', 'C'] as Concept[]).map(c => (
+          {(['A', 'B', 'C', 'V2'] as Concept[]).map(c => (
             <button key={c} style={btn(concept === c)} onClick={() => setConcept(c)} title={HSC_CONCEPTS[c].name}>
               Concept {c}
             </button>
@@ -180,7 +180,7 @@ export function EnduranceTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(['A', 'B', 'C'] as Concept[]).map(c => {
+                  {(['A', 'B', 'C', 'V2'] as Concept[]).map(c => {
                     const r = cmp[c];
                     const gain = r.lap_time_ice_only_s - Math.min(...r.lap_times_s.slice(1));
                     return (

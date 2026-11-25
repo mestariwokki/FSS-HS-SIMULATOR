@@ -158,6 +158,28 @@ current and the 45 °C charge limit). The car reaches about 118 km/h at
 keeps margin in both. The model fades motor torque linearly over the last
 20 % below no-load speed; the real VESC limit is not measured.
 
+### HSC v2 rev0.2 (`HSC_CONCEPTS.V2`, `node scripts/hsc-v2-scenarios.mjs`)
+
+Current design from `hybrid/hsc-v2/HSC-v2-suunnittelu.md`: 5.8 kg (car mass
++1.3 kg in these runs), 0.8 mm Al fin per cell pair, 60 mm fan across a
+plenum. Fin conduction to the plenum limits the cooling path to about
+0.65 W/K (~25 W at 30 K, as the design doc estimates), so over a 25 min
+endurance the cells' own heat capacity matters more than the fan.
+Hub motors and VESC_FSO as in `emDrive.ts` (FDD86367-F085, 4 per switch,
+4.2 mΩ max each → R_esc ≈ 3–4 mΩ incl. shunt and PCB).
+
+| Case | I_rms | I_peak | T sensor max | SOC end | Endurance gain |
+|---|---|---|---|---|---|
+| 30 °C | 59 A | 144 A | 46.0 °C | 30 % | 9.2 s |
+| 35 °C | 58 A | 144 A | 50.2 °C | 23 % | 9.2 s |
+| 30 °C, fan failure | 59 A | 144 A | 46.6 °C | 30 % | 9.2 s |
+| 30 °C, R_hsc 2.0 mΩ | 59 A | 144 A | 46.4 °C | 30 % | 9.2 s |
+| 30 °C, gear 3.5 | 62 A | 145 A | 48.3 °C | 23 % | 10.3 s |
+| 30 °C, motor + VESC 120 A | 66 A | 163 A | 51.6 °C | 15 % (k 0.76) | 10.2 s |
+
+75 m: 3.846 s (ICE only 3.968 s); gear 3.5 3.830 s; 120 A 3.794 s at the
+198 A HSC limit; 120 A + gear 3.5 3.772 s.
+
 ## 4. Known limitations
 
 * OCV curve, R(T, SOC), RC split and all thermal UA/C are estimates.
