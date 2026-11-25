@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DU_DT_POS, DU_DT_NEG } from '../constants';
+import { getNextCurrent, type CurrentParams } from '../currentControl';
 import { simStep } from '../simStep';
 import { initialConcentrations } from '../ocv';
 import type { SimState, PackConfig, EcmConfig } from '../../types';
@@ -93,6 +94,31 @@ describe('simStep — integration step', () => {
       state = simStep(state, PACK, ECM, 250, 0.1).state;
     }
     expect(state.T_K).toBeGreaterThan(T0);
+  });
+
+  it('tracks ambient steps independently of cell temperature at rest', () => {
+    const params: CurrentParams = {
+      mode: 'profile', ambient_C: 35,
+      profileSteps: [{ duration_s: 30, current_A: 0, ambient_C: 0 }, { duration_s: 60, current_A: 0 }],
+      current_A: 0, duration_s: 0, charge_current_A: 0, cutoff_current_A: 0,
+      charge_duration_s: 0, cv_t_start: null,
+    };
+    let state = makeState();
+    let expectedC = state.T_K - 273.15;
+    for (const [duration, ambient] of [[30, 0], [60, 35]]) {
+      const input = getNextCurrent(state.t, PACK.v_nom, params, PACK);
+      const result = simStep(state, PACK, ECM, input.i, duration, input.ambient_C);
+      expectedC = ambient + (expectedC - ambient) * Math.exp(-PACK.coolingUA_WK * duration / PACK.thermalMass_JK);
+      expect(result.point.ambient_C).toBe(ambient);
+      expect(result.point.T_C).toBeCloseTo(expectedC, 10);
+      state = result.state;
+    }
+  });
+
+  it('defaults to 25 °C for legacy simulations', () => {
+    const result = simStep(makeState(), PACK, ECM, 0, 10);
+    expect(result.point.ambient_C).toBe(25);
+    expect(result.point.T_C).toBeCloseTo(25, 10);
   });
 
   it('uses aged pack resistance for reported ohmic heat', () => {

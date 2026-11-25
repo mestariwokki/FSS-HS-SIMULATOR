@@ -8,7 +8,7 @@ export function exportBatteryCSV(data: BatteryDataPoint[], mode: string, cycles:
     't_s', 'soc_pct', 'voc_V', 'vt_V', 'i_A', 'p_W', 'ah_Ah', 'T_C',
     'eta_pos_mV', 'eta_neg_mV', 'xp', 'xn', 'upos_V', 'uneg_V',
     'vrc1_V', 'vrc2_V', 'soh_cap_pct', 'soh_res_pct', 'q_eff_Ah',
-    'wh_out_Wh', 'wh_in_Wh',
+    'wh_out_Wh', 'wh_in_Wh', 'ambient_C',
   ];
 
   const rows = data.map(d => [
@@ -18,7 +18,7 @@ export function exportBatteryCSV(data: BatteryDataPoint[], mode: string, cycles:
     d.xp.toFixed(5), d.xn.toFixed(5), d.up.toFixed(4), d.un.toFixed(4),
     d.vrc.toFixed(5), d.vrc2.toFixed(5),
     d.soh_cap.toFixed(2), d.soh_res.toFixed(2),
-    d.q_eff.toFixed(4), d.wh_out.toFixed(4), d.wh_in.toFixed(4),
+    d.q_eff.toFixed(4), d.wh_out.toFixed(4), d.wh_in.toFixed(4), d.ambient_C.toFixed(2),
   ].join(','));
 
   const csv = [headers.join(','), ...rows].join('\n');

@@ -104,7 +104,7 @@ export function useBatterySim() {
           return;
         }
 
-        const stepResult = simStep(st, p, e, result.i, dt);
+        const stepResult = simStep(st, p, e, result.i, dt, result.ambient_C);
         st = stepResult.state;
         lastPoint = stepResult.point;
 
@@ -194,7 +194,7 @@ export function useBatterySim() {
             return;
           }
 
-          const stepResult = simStep(st, p, e, result.i, dt);
+          const stepResult = simStep(st, p, e, result.i, dt, result.ambient_C);
           st = stepResult.state;
 
           const s = statsRef.current;

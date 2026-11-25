@@ -42,6 +42,7 @@ export function BatteryTab() {
   const [chargeDuration, setChargeDuration] = useState(3600);
   const [ocLimit, setOcLimit] = useState(250);
   const [tLimit, setTLimit] = useState(60);
+  const [ambientC, setAmbientC] = useState(25);
   const [t0, setT0] = useState(25);
   const [soc0, setSoc0] = useState(100);
 
@@ -107,6 +108,7 @@ export function BatteryTab() {
   const handleStart = useCallback(() => {
     sim.start(pack, ecm, mode, soc0, t0, {
       mode,
+      ambient_C: ambientC,
       current_A: current,
       duration_s: duration,
       profileSteps,
@@ -114,7 +116,7 @@ export function BatteryTab() {
       cutoff_current_A: chargeCutoff,
       charge_duration_s: chargeDuration,
     }, { oc_limit: ocLimit, t_limit: tLimit });
-  }, [sim, pack, ecm, mode, soc0, t0, current, duration, profileSteps, chargeCurrent, chargeCutoff, chargeDuration, ocLimit, tLimit]);
+  }, [sim, pack, ecm, mode, soc0, t0, ambientC, current, duration, profileSteps, chargeCurrent, chargeCutoff, chargeDuration, ocLimit, tLimit]);
 
   const chartData = useMemo(() =>
     sim.data.map(d => ({
@@ -127,6 +129,7 @@ export function BatteryTab() {
       eta_neg: d.eta_neg,
       eta_tot: d.eta_pos + d.eta_neg,
       T_C: d.T_C,
+      ambient_C: d.ambient_C,
       p_t: d.i_bat * d.v_t / 1000,
       p_oc: d.i_bat * d.v_oc / 1000,
     })),
@@ -171,6 +174,7 @@ export function BatteryTab() {
                 onChargeDurationChange={setChargeDuration}
                 ocLimit={ocLimit} tLimit={tLimit}
                 onOcLimitChange={setOcLimit} onTLimitChange={setTLimit}
+                ambientC={ambientC} onAmbientChange={setAmbientC}
                 t0={t0} soc0={soc0} onT0Change={setT0} onSoc0Change={setSoc0}
               />
               <SoHPanel
@@ -292,6 +296,7 @@ export function BatteryTab() {
                 data={chartData}
                 series={[
                   { key: 'T_C', color: '#ffa726', label: 'T_cell', lineWidth: 2 },
+                  { key: 'ambient_C', color: '#64b5f6', label: 'T_ambient', lineWidth: 1 },
                 ]}
                 xKey="t"
                 height={120}

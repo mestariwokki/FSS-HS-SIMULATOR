@@ -20,6 +20,8 @@ interface SimModePanelProps {
   tLimit: number;
   onOcLimitChange: (v: number) => void;
   onTLimitChange: (v: number) => void;
+  ambientC: number;
+  onAmbientChange: (v: number) => void;
   t0: number;
   soc0: number;
   onT0Change: (v: number) => void;
@@ -80,6 +82,7 @@ export function SimModePanel(props: SimModePanelProps) {
               <tr>
                 <th style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', padding: '3px 4px', textAlign: 'left', borderBottom: '1px solid var(--border-dim)' }}>Duration (s)</th>
                 <th style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', padding: '3px 4px', textAlign: 'left', borderBottom: '1px solid var(--border-dim)' }}>Current (A)</th>
+                <th style={{ fontSize: '9px', color: 'var(--text-dim)' }}>Ambient (°C)</th>
                 <th style={{ width: '20px' }}></th>
               </tr>
             </thead>
@@ -117,6 +120,22 @@ export function SimModePanel(props: SimModePanelProps) {
                         padding: '3px 5px',
                         color: step.current_A < 0 ? 'var(--accent-vehicle)' : 'var(--text-primary)',
                       }}
+                    />
+                  </td>
+                  <td style={{ padding: '2px' }}>
+                    <input
+                      type="number"
+                      step="any"
+                      aria-label={`Ambient temperature for step ${i + 1} (°C)`}
+                      placeholder={String(props.ambientC)}
+                      value={step.ambient_C ?? ''}
+                      onChange={e => {
+                        const value = e.currentTarget.valueAsNumber;
+                        const newSteps = [...profileSteps];
+                        newSteps[i] = { ...step, ambient_C: Number.isFinite(value) ? value : undefined };
+                        onProfileChange(newSteps);
+                      }}
+                      style={{ width: '100%', fontSize: '12px', padding: '3px 5px' }}
                     />
                   </td>
                   <td>
@@ -168,7 +187,8 @@ export function SimModePanel(props: SimModePanelProps) {
       {/* Initial conditions */}
       <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-dim)' }}>
         <div style={{ fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>Initial conditions</div>
-        <ParamGroup label="Temperature" value={props.t0} onChange={props.onT0Change} min={-20} max={60} step={1} unit="C" />
+        <ParamGroup label="Ambient temperature" value={props.ambientC} onChange={props.onAmbientChange} step={0.1} unit="°C" />
+        <ParamGroup label="Initial cell temp." value={props.t0} onChange={props.onT0Change} min={-20} max={60} step={1} unit="C" />
         <ParamGroup label="Initial SOC" value={props.soc0} onChange={props.onSoc0Change} min={10} max={100} step={5} unit="%" />
       </div>
     </div>

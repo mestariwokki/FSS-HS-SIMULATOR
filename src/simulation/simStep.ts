@@ -21,6 +21,7 @@ export function simStep(
   ecm: EcmConfig,
   i_bat: number,
   dt: number,
+  ambient_C = T_REF - 273.15,
 ): SimStepResult {
   const T = state.T_K;
 
@@ -111,7 +112,7 @@ export function simStep(
     rcHeatW(state.V_RC, i_bat, R1_pack, ecm.tau1_s, dt) +
     rcHeatW(state.V_RC2, i_bat, R2_pack, ecm.tau2_s, dt);
   const T_K = stepThermal(
-    T, i_bat, I_cell, R_eff, T_REF, pack.thermalMass_JK,
+    T, i_bat, I_cell, R_eff, ambient_C + 273.15, pack.thermalMass_JK,
     pack.coolingUA_WK, dt, pack.series * pack.parallel, polarizationHeat,
   );
 
@@ -138,6 +139,7 @@ export function simStep(
     i_bat,
     p_inst: P_inst,
     T_C: T_K - 273.15,
+    ambient_C,
     eta_pos: eta_p * 1000,
     eta_neg: eta_n * 1000,
     wh_out,
