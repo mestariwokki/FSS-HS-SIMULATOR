@@ -96,17 +96,32 @@ describe('simStep — integration step', () => {
     expect(state.T_K).toBeGreaterThan(T0);
   });
 
+  it('limits charging current using next-step terminal voltage and stops at taper cutoff', () => {
+    const params: CurrentParams = {
+      mode: 'charge', charge_current_A: 10, cutoff_current_A: 1, charge_duration_s: 100,
+      current_A: 0, duration_s: 0, profileSteps: [],
+    };
+    const state = makeState(0.7);
+    const voltage = (current: number) => simStep(state, PACK, ECM, current, 0.1).point.v_t;
+    const pack = { ...PACK, v_max: voltage(-5) };
+    const result = getNextCurrent(0, params, pack, voltage);
+    expect(result.i).toBeCloseTo(-5, 2);
+    expect(voltage(result.i)).toBeLessThanOrEqual(pack.v_max);
+    expect(getNextCurrent(0, params, { ...pack, v_max: voltage(-0.5) }, voltage).done).toBe(true);
+    expect(getNextCurrent(0, params, { ...pack, v_max: voltage(-10) + 1 }, voltage).i).toBe(-10);
+  });
+
   it('tracks ambient steps independently of cell temperature at rest', () => {
     const params: CurrentParams = {
       mode: 'profile', ambient_C: 35,
       profileSteps: [{ duration_s: 30, current_A: 0, ambient_C: 0 }, { duration_s: 60, current_A: 0 }],
       current_A: 0, duration_s: 0, charge_current_A: 0, cutoff_current_A: 0,
-      charge_duration_s: 0, cv_t_start: null,
+      charge_duration_s: 0,
     };
     let state = makeState();
     let expectedC = state.T_K - 273.15;
     for (const [duration, ambient] of [[30, 0], [60, 35]]) {
-      const input = getNextCurrent(state.t, PACK.v_nom, params, PACK);
+      const input = getNextCurrent(state.t, params, PACK, () => PACK.v_nom);
       const result = simStep(state, PACK, ECM, input.i, duration, input.ambient_C);
       expectedC = ambient + (expectedC - ambient) * Math.exp(-PACK.coolingUA_WK * duration / PACK.thermalMass_JK);
       expect(result.point.ambient_C).toBe(ambient);

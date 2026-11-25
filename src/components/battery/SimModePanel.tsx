@@ -172,7 +172,7 @@ export function SimModePanel(props: SimModePanelProps) {
           <ParamGroup label="Max time" value={props.chargeDuration} onChange={props.onChargeDurationChange} min={60} max={14400} step={60} unit="s" />
           <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '6px', lineHeight: 1.5 }}>
             CC: constant current until V &ge; V_max<br />
-            CV: current decays, stop when I &lt; cutoff
+            CV: current follows the voltage limit, stop at cutoff current
           </div>
         </div>
       )}

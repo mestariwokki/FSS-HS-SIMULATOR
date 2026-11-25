@@ -49,11 +49,11 @@ export function simStep(
   const j_pos = I_dens / (A_POS * L_POS);
   const j_neg = -I_dens / (A_NEG * L_NEG);
 
-  // Surface concentration - parabolic approximation
+  // Surface enrichment follows insertion: positive electrode on discharge, negative on charge.
   const cs_p = Math.max(50, Math.min(C_MAX_POS - 50,
-    state.c_avg_pos - j_pos * R_P_POS / (5 * Ds_p * F)));
+    state.c_avg_pos + j_pos * R_P_POS / (5 * Ds_p * F)));
   const cs_n = Math.max(50, Math.min(C_MAX_NEG - 50,
-    state.c_avg_neg - j_neg * R_P_NEG / (5 * Ds_n * F)));
+    state.c_avg_neg + j_neg * R_P_NEG / (5 * Ds_n * F)));
 
   // Stoichiometry from surface concentration
   const xp = cs_p / C_MAX_POS;
@@ -67,12 +67,12 @@ export function simStep(
   const j0_p = k_p * F * Math.sqrt(C_E * cs_p * (C_MAX_POS - cs_p));
   const j0_n = k_n * F * Math.sqrt(C_E * cs_n * (C_MAX_NEG - cs_n));
 
-  // Overpotential eta (Butler-Volmer inversion - arcsinh)
+  // Electrode contributions to terminal voltage loss, positive on discharge.
   const eta_p = j0_p > 1e-20
     ? (R_GAS * T / (ALPHA * F)) * Math.asinh(j_pos / (2 * j0_p))
     : 0;
   const eta_n = j0_n > 1e-20
-    ? (R_GAS * T / (ALPHA * F)) * Math.asinh(j_neg / (2 * j0_n))
+    ? (R_GAS * T / (ALPHA * F)) * Math.asinh(-j_neg / (2 * j0_n))
     : 0;
 
   // Terminal voltage (per cell -> times S)

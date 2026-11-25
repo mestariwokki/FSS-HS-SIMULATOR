@@ -12,28 +12,25 @@ export interface CurrentParams {
   charge_current_A: number;
   cutoff_current_A: number;
   charge_duration_s: number;
-  cv_t_start: number | null;
 }
 
 export interface CurrentResult {
   ambient_C?: number;
   i: number;
   done: boolean;
-  cv_t_start: number | null;
 }
 
 export function getNextCurrent(
   t: number,
-  v_t: number,
   params: CurrentParams,
   pack: PackConfig,
+  predictVoltage: (current_A: number) => number,
 ): CurrentResult {
   if (params.mode === 'const') {
     return {
       i: params.current_A,
       ambient_C: params.ambient_C,
       done: t >= params.duration_s,
-      cv_t_start: params.cv_t_start,
     };
   }
 
@@ -42,10 +39,10 @@ export function getNextCurrent(
     for (const s of params.profileSteps) {
       elapsed += s.duration_s;
       if (t < elapsed) {
-        return { i: s.current_A, ambient_C: s.ambient_C ?? params.ambient_C, done: false, cv_t_start: params.cv_t_start };
+        return { i: s.current_A, ambient_C: s.ambient_C ?? params.ambient_C, done: false };
       }
     }
-    return { i: 0, done: true, cv_t_start: params.cv_t_start };
+    return { i: 0, done: true };
   }
 
   if (params.mode === 'charge') {
@@ -54,23 +51,25 @@ export function getNextCurrent(
     const dur = params.charge_duration_s;
     const v_max = pack.v_max;
 
-    if (t >= dur) return { i: 0, done: true, cv_t_start: params.cv_t_start };
+    if (t >= dur) return { i: 0, done: true };
 
-    // CC phase: constant negative current (charging)
-    if (v_t < v_max - 0.05) {
-      return { i: -cc, ambient_C: params.ambient_C, done: false, cv_t_start: params.cv_t_start };
+    if (predictVoltage(-cc) <= v_max) {
+      return { i: -cc, ambient_C: params.ambient_C, done: false };
     }
 
-    // CV phase: current decays to keep V at V_max
-    let cv_start = params.cv_t_start;
-    if (cv_start === null) cv_start = t;
-    const tau = 0.15 * (pack.capacity_Ah * 3600 / cc);
-    const i_cv = -cc * Math.exp(-(t - cv_start) / tau);
-    if (Math.abs(i_cv) < cut) {
-      return { i: 0, done: true, cv_t_start: cv_start };
+    if (predictVoltage(0) >= v_max) return { i: 0, done: true };
+
+    // Solve the terminal-voltage constraint within the charger's current range.
+    let safeCurrent = 0;
+    let higherCurrent = cc;
+    while (higherCurrent - safeCurrent > 0.001) {
+      const candidate = (safeCurrent + higherCurrent) / 2;
+      if (predictVoltage(-candidate) <= v_max) safeCurrent = candidate;
+      else higherCurrent = candidate;
     }
-    return { i: i_cv, ambient_C: params.ambient_C, done: false, cv_t_start: cv_start };
+    if (safeCurrent <= cut) return { i: 0, done: true };
+    return { i: -safeCurrent, ambient_C: params.ambient_C, done: false };
   }
 
-  return { i: 0, done: true, cv_t_start: params.cv_t_start };
+  return { i: 0, done: true };
 }
