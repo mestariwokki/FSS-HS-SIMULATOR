@@ -1,0 +1,47 @@
+ICE only {"pts":210.30793038774004,"t75":3.9679999999997846,"tax":66.66555395791283,"tend":1551.471977089122}
+BASELINE g 3 short 86A end 86A Tlim 85-100 | OK  pts 10.07 | t75 3.842 ax 66.14 end 1543.9 | Tm 93 Ts 38.7 Tesc 44 soc 50 Irms 44 der 325 k 1.00 vmax 121/137
+
+feasible 316/672; top 15:
+g 3.25 short 120A end 120A Tlim 85-100 | OK  pts 12.54 | t75 3.808 ax 66.00 end 1542.4 | Tm 95 Ts 40.1 Tesc 44 soc 47 Irms 48 der 299 k 1.00 vmax 121/126
+g 3.25 short 120A end 100A Tlim 85-100 | OK  pts 12.28 | t75 3.808 ax 66.00 end 1543.0 | Tm 94 Ts 39.8 Tesc 44 soc 48 Irms 47 der 296 k 1.00 vmax 121/126
+g 3.25 short 120A end 86A Tlim 85-100 | OK  pts 12.08 | t75 3.808 ax 66.00 end 1543.4 | Tm 93 Ts 39.6 Tesc 44 soc 48 Irms 47 der 289 k 1.00 vmax 121/126
+g 3.25 short 120A end 85A Tlim 85-100 | OK  pts 12.06 | t75 3.808 ax 66.00 end 1543.4 | Tm 93 Ts 39.6 Tesc 44 soc 48 Irms 47 der 288 k 1.00 vmax 121/126
+g 3 short 120A end 120A Tlim 130-145 | OK  pts 11.95 | t75 3.818 ax 66.04 end 1542.5 | Tm 139 Ts 48.0 Tesc 48 soc 22 Irms 61 der 239 k 1.00 vmax 121/132
+g 3 short 120A end 120A Tlim 115-130 | OK  pts 11.88 | t75 3.818 ax 66.04 end 1542.7 | Tm 124 Ts 44.0 Tesc 47 soc 34 Irms 55 der 279 k 1.00 vmax 121/134
+g 3.25 short 100A end 120A Tlim 85-100 | OK  pts 11.88 | t75 3.820 ax 66.06 end 1542.4 | Tm 95 Ts 40.1 Tesc 44 soc 47 Irms 48 der 299 k 1.00 vmax 121/126
+g 3 short 120A end 100A Tlim 130-145 | OK  pts 11.81 | t75 3.818 ax 66.04 end 1542.8 | Tm 138 Ts 48.4 Tesc 48 soc 21 Irms 61 der 225 k 1.00 vmax 121/132
+g 3 short 120A end 120A Tlim 100-115 | OK  pts 11.81 | t75 3.818 ax 66.04 end 1542.8 | Tm 110 Ts 41.5 Tesc 46 soc 42 Irms 51 der 309 k 1.00 vmax 121/135
+g 3.25 short 120A end 70A Tlim 85-100 | OK  pts 11.72 | t75 3.808 ax 66.00 end 1544.1 | Tm 91 Ts 39.1 Tesc 43 soc 49 Irms 45 der 288 k 1.00 vmax 121/127
+g 3 short 120A end 120A Tlim 85-100 | OK  pts 11.71 | t75 3.818 ax 66.04 end 1543.0 | Tm 95 Ts 39.2 Tesc 44 soc 49 Irms 45 der 335 k 1.00 vmax 121/137
+g 3 short 120A end 86A Tlim 130-145 | OK  pts 11.67 | t75 3.818 ax 66.04 end 1543.1 | Tm 136 Ts 48.1 Tesc 48 soc 22 Irms 60 der 162 k 1.00 vmax 121/132
+g 3 short 120A end 100A Tlim 115-130 | OK  pts 11.67 | t75 3.818 ax 66.04 end 1543.1 | Tm 123 Ts 43.8 Tesc 47 soc 34 Irms 55 der 263 k 1.00 vmax 121/134
+g 3 short 120A end 85A Tlim 130-145 | OK  pts 11.66 | t75 3.818 ax 66.04 end 1543.1 | Tm 136 Ts 47.6 Tesc 48 soc 23 Irms 60 der 163 k 1.00 vmax 121/132
+g 3.25 short 100A end 100A Tlim 85-100 | OK  pts 11.62 | t75 3.820 ax 66.06 end 1543.0 | Tm 94 Ts 39.8 Tesc 44 soc 48 Irms 47 der 296 k 1.00 vmax 121/126
+
+best per gear:
+g 2.5 short 120A end 120A Tlim 130-145 | OK  pts 10.07 | t75 3.842 ax 66.14 end 1543.9 | Tm 139 Ts 42.6 Tesc 49 soc 36 Irms 52 der 320 k 1.00 vmax 121/161
+g 2.75 short 120A end 120A Tlim 130-145 | OK  pts 11.01 | t75 3.830 ax 66.09 end 1543.2 | Tm 139 Ts 45.1 Tesc 49 soc 29 Irms 56 der 286 k 1.00 vmax 121/145
+g 3 short 120A end 120A Tlim 130-145 | OK  pts 11.95 | t75 3.818 ax 66.04 end 1542.5 | Tm 139 Ts 48.0 Tesc 48 soc 22 Irms 61 der 239 k 1.00 vmax 121/132
+g 3.25 short 120A end 120A Tlim 85-100 | OK  pts 12.54 | t75 3.808 ax 66.00 end 1542.4 | Tm 95 Ts 40.1 Tesc 44 soc 47 Irms 48 der 299 k 1.00 vmax 121/126
+g 3.5 no feasible
+g 3.75 no feasible
+g 4 no feasible
+
+infeasible reasons (gear ≥ 3.5):
+g 3.5 short 120A end 85A Tlim 130-145 | NOK pts 13.22 | t75 3.798 ax 65.95 end 1542.1 | Tm 135 Ts 51.3 Tesc 46 soc 15 Irms 65 der 48 k 0.93 vmax 121/112 short ok true end ok false
+g 3.75 short 120A end 85A Tlim 130-145 | NOK pts 13.88 | t75 3.792 ax 65.91 end 1541.6 | Tm 135 Ts 51.4 Tesc 45 soc 15 Irms 66 der 19 k 0.93 vmax 120/104 short ok false end ok false
+g 4 short 120A end 85A Tlim 130-145 | NOK pts 14.51 | t75 3.788 ax 65.88 end 1540.8 | Tm 134 Ts 52.0 Tesc 45 soc 15 Irms 67 der 12 k 0.99 vmax 120/98 short ok false end ok false
+
+Monte Carlo N=150 (points vs baseline g3/86A/86A/85-100): P(best), mean, P10, P90, P(gain>0), infeasible, motor T P90
+g 3.25 short 120 end 120 Tlim 85-100: best 61% mean 2.46 P10 1.92 P90 2.94 P>0 100% NOK 55 TmP90 96
+g 3.25 short 120 end 100 Tlim 85-100: best 1% mean 2.20 P10 1.74 P90 2.61 P>0 100% NOK 54 TmP90 95
+g 3.25 short 120 end 86 Tlim 85-100: best 1% mean 2.00 P10 1.59 P90 2.38 P>0 100% NOK 53 TmP90 94
+g 3.25 short 120 end 85 Tlim 85-100: best 1% mean 1.98 P10 1.58 P90 2.36 P>0 100% NOK 52 TmP90 94
+g 3 short 120 end 120 Tlim 130-145: best 13% mean 1.86 P10 1.24 P90 2.47 P>0 100% NOK 0 TmP90 140
+g 3 short 120 end 120 Tlim 115-130: best 24% mean 1.87 P10 1.30 P90 2.42 P>0 100% NOK 0 TmP90 126
+g 3.25 short 100 end 120 Tlim 85-100: best 0% mean 1.76 P10 1.44 P90 2.04 P>0 100% NOK 55 TmP90 96
+g 3 short 120 end 100 Tlim 130-145: best 0% mean 1.73 P10 1.20 P90 2.28 P>0 100% NOK 0 TmP90 139
+g 2.5 short 120 end 120 Tlim 130-145: best 0% mean 0.13 P10 -0.41 P90 0.61 P>0 60% NOK 0 TmP90 140
+g 2.75 short 120 end 120 Tlim 130-145: best 0% mean 1.02 P10 0.47 P90 1.55 P>0 100% NOK 0 TmP90 140
+g 3 short 86 end 86 Tlim 85-100: best 0% mean 0.00 P10 0.00 P90 0.00 P>0 0% NOK 0 TmP90 95
+g 3.25 short 86 end 86 Tlim 85-100: best 0% mean 0.75 P10 0.71 P90 0.78 P>0 100% NOK 53 TmP90 94

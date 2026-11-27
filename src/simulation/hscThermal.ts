@@ -19,7 +19,7 @@
  * curve of the built stack (one 20 min constant-current test gives both C and UA).
  */
 
-export type ConceptId = 'A' | 'B' | 'C' | 'custom';
+export type ConceptId = 'A' | 'B' | 'C' | 'V2' | 'custom';
 
 export interface HscThermalParams {
   id: ConceptId;
@@ -94,6 +94,28 @@ export const HSC_CONCEPTS: Record<Exclude<ConceptId, 'custom'>, HscThermalParams
     UA_fan_WK: 5.5,          // fin area ≈0.2 m², h≈40, ε-NTU limited by fan flow
     R_int_cell_KW: R_INT,
     note: 'Fan must run whenever the HSC is live; fan failure ≈ concept A.',
+  },
+  V2: {
+    id: 'V2',
+    name: 'HSC v2 rev0.2 – two stacks, 0.8 mm Al fins + 60 mm fan',
+    // hybrid/hsc-v2/HSC-v2-suunnittelu.md: 2 stacks (7 + 6 pairs), one 0.8 mm
+    // Al 1050 fin per pair (kapton, both cells of the pair touch it), fins run
+    // 25 mm down into a plenum, 60 mm 12 V fan across the plenum.
+    // Bottleneck is fin conduction from the cell face down to the plenum:
+    // k·A/L = 220 · (43 mm × 0.8 mm) / ~60 mm ≈ 0.13 W/K per fin, 13 fins ≈ 1.6 W/K.
+    // Plenum: 13 fins × 2 × 25 × 43 mm ≈ 0.028 m², h ≈ 40 → ≈ 1.1 W/K.
+    // In series ≈ 0.65 W/K, i.e. ~20–25 W at 30 K — the design doc's own
+    // estimate is 25–30 W. Mid-stack cells (no end-plate leakage) are the hot node.
+    f_hot: 14 / 26,
+    C_struct_JK: 800,        // fins 176 g Al, Al busbars 224 g, CFRP end/base plates ~600 g, G10 ~320 g; printed hood poorly coupled
+    UA_hot_struct_WK: 0.85,  // 14 cells' share of the fin conduction
+    UA_cells_struct_WK: 1.1, // 12 cells: fins + end plates
+    UA_hot_cells_WK: 0.4,    // through 1 mm foam / PET between pairs
+    UA_amb0_WK: 0.5,         // printed FR hood, natural convection
+    UA_amb_kv: 0.08,         // little ram air reaches the plenum
+    UA_fan_WK: 1.1,          // plenum convection with the fan on
+    R_int_cell_KW: R_INT,
+    note: 'Current HSC design (5.8 kg). Fin conduction limits cooling to ~25 W; fan must run while the HSC is live.',
   },
 };
 

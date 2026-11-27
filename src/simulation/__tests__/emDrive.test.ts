@@ -27,16 +27,33 @@ describe('hub motor + ESC drive', () => {
     }
   });
 
-  it('efficiency 80–92 % at a typical endurance point, lower at stall-like load', () => {
-    const mid = emOperatingPoint(p, 250, 15, 52, r).eta;
-    expect(mid).toBeGreaterThan(0.80);
+  it('efficiency 78–92 % at 90 km/h part load, lower at stall-like load', () => {
+    const mid = emOperatingPoint(p, 150, 25, 52, r).eta;
+    expect(mid).toBeGreaterThan(0.78);
     expect(mid).toBeLessThan(0.92);
     expect(emOperatingPoint(p, 600, 2, 52, r).eta).toBeLessThan(mid);
+  });
+
+  it('copper loss follows the datasheet Rm and rises with winding temperature', () => {
+    const Kt = 60 / (2 * Math.PI * p.kV);
+    const F = 2 * 5 * p.gear * p.eta_gear / r;   // 5 Nm per motor
+    const cold = emOperatingPoint(p, F, 0.1, 52, r, 25);
+    const hot = emOperatingPoint(p, F, 0.1, 52, r, 125);
+    const I = 5 / Kt;
+    expect(cold.P_loss_motor_W).toBeGreaterThan(0.086 * I * I);
+    expect(cold.P_loss_motor_W).toBeLessThan(0.086 * I * I + 5);
+    expect(hot.P_loss_motor_W / cold.P_loss_motor_W).toBeGreaterThan(1.35);
   });
 
   it('field weakening: no torque above no-load speed', () => {
     const v_nl = p.kV * 50 / p.gear * 2 * Math.PI / 60 * r;
     expect(emMaxWheelForce(p, v_nl * 1.01, 50, r, 80, true)).toBe(0);
+  });
+
+  it('ESC conduction loss rises with FET temperature (Rds(on) +0.38 %/K)', () => {
+    const cold = emOperatingPoint(p, 400, 5, 52, r, 25, 25).P_loss_esc_W;
+    const hot = emOperatingPoint(p, 400, 5, 52, r, 25, 100).P_loss_esc_W;
+    expect(hot).toBeGreaterThan(cold * 1.1);
   });
 
   it('VESC-style derating between 85 and 100 °C', () => {
