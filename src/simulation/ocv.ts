@@ -1,4 +1,5 @@
 import { X_POS_0, X_POS_100, X_NEG_0, X_NEG_100, C_MAX_POS, C_MAX_NEG } from './constants';
+import { ocvCellTable } from './cellData';
 
 /** LiCoO2 positive electrode OCP - Ramadass2004 rational polynomial */
 export function U_pos(x: number): number {
@@ -22,11 +23,18 @@ export function U_neg(x: number): number {
   );
 }
 
-/** Single cell OCV from SOC [0..1] */
+/**
+ * Single cell OCV from SOC [0..1] — EP9343126VVP table (4.45 V HV-LiCoO2).
+ * The Ramadass U_pos/U_neg curves above top out at ~3.9 V and are kept only
+ * for the electrode diagnostics of the SPM part.
+ */
 export function ocvCell(soc: number): number {
-  const s = Math.max(0, Math.min(1, soc));
-  const xp = X_POS_0 + (X_POS_100 - X_POS_0) * s;
-  const xn = X_NEG_0 + (X_NEG_100 - X_NEG_0) * s;
+  return ocvCellTable(soc);
+}
+
+/** Electrode-level OCV from the Ramadass2004 / Dualfoil curves (diagnostic only) */
+export function ocvCellElectrode(soc: number): number {
+  const { xp, xn } = stoichiometryFromSoc(soc);
   return U_pos(xp) - U_neg(xn);
 }
 

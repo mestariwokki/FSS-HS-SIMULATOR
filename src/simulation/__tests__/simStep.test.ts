@@ -18,9 +18,9 @@ const PACK: PackConfig = {
 };
 
 const ECM: EcmConfig = {
-  R1_Ohm: 0.010,
+  R1_Ohm: 0.001,
   tau1_s: 5,
-  R2_Ohm: 0.015,
+  R2_Ohm: 0.001,
   tau2_s: 50,
   cycles: 0,
   kQ: 1.5e-4,
@@ -40,6 +40,7 @@ function makeState(soc = 0.95): SimState {
     V_RC: 0,
     V_RC2: 0,
     T_K: 298.15,
+    T_amb_K: 298.15,
     ah: 0,
     wh_out: 0,
     wh_in: 0,
@@ -120,3 +121,64 @@ describe('simStep — integration step', () => {
     expect(point.v_oc - point.v_t).toBeGreaterThan(0);
   });
 });
+
+describe('simStep — EP9343126VVP behaviour (regression for review 2026-10-28)', () => {
+  function discharge(I: number, socEnd: number) {
+    let state = makeState(1.0);
+    const first = simStep(state, PACK, ECM, I, 0.1);
+    let last = first.point;
+    state = first.state;
+    while (state.soc > socEnd) {
+      const r = simStep(state, PACK, ECM, I, 0.1);
+      state = r.state;
+      last = r.point;
+    }
+    return { first: first.point, last, state };
+  }
+
+  it('full pack OCV is close to 13 × 4.45 V, not 13 × 3.9 V', () => {
+    const { point } = simStep(makeState(1.0), PACK, ECM, 0, 0.1);
+    expect(point.v_oc).toBeGreaterThan(57);
+    expect(point.v_oc).toBeLessThanOrEqual(PACK.v_max);
+  });
+
+  it('terminal voltage drops under load at every current (no rise from SPM terms)', () => {
+    for (const I of [13.2, 50, 100, 198]) {
+      const { point } = simStep(makeState(1.0), PACK, ECM, I, 0.1);
+      expect(point.v_t).toBeLessThan(point.v_oc);
+      expect(point.v_oc).toBeLessThanOrEqual(PACK.v_max);
+    }
+  });
+
+  it('OCV follows SOC during a 1C discharge (100 → 20 %)', () => {
+    const { first, last } = discharge(13.2, 0.2);
+    expect(first.v_oc - last.v_oc).toBeGreaterThan(7);   // ≈ 57.6 → 48.9 V
+  });
+
+  it('SPM bulk stoichiometry tracks SOC (bulk update uses I_dens)', () => {
+    const { state } = discharge(13.2, 0.5);
+    const xp_expected = 0.49 + (0.99 - 0.49) * 0.5;
+    expect(state.c_avg_pos / 51410).toBeCloseTo(xp_expected, 1);
+  });
+
+  it('1C average discharge voltage is close to the datasheet 3.90 V/cell', () => {
+    let state = makeState(1.0);
+    let wh = 0, ah = 0;
+    while (state.soc > 0.0) {
+      const r = simStep(state, PACK, ECM, 13.2, 1);
+      state = r.state;
+      wh += r.point.v_t * 13.2 / 3600;
+      ah += 13.2 / 3600;
+      if (r.point.v_t < PACK.v_min) break;
+    }
+    expect(wh / ah / PACK.series).toBeGreaterThan(3.8);
+    expect(wh / ah / PACK.series).toBeLessThan(4.0);
+  });
+
+  it('cools toward the run ambient, not a fixed 25 °C', () => {
+    let state = { ...makeState(0.5), T_K: 273.15 + 40, T_amb_K: 273.15 + 35 };
+    for (let i = 0; i < 20000; i++) state = simStep(state, PACK, ECM, 0, 1).state;
+    expect(state.T_K - 273.15).toBeCloseTo(35, 0);
+  });
+});
+

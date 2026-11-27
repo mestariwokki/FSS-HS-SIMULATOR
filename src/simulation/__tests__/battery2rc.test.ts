@@ -4,28 +4,32 @@ import {
   r0TempCorrect,
   step2RC, terminalVoltage,
   battery2RCStep,
+  packMaxPowerW,
   TAU1_S, TAU2_S,
 } from '../battery';
+import { CELL_R_AC_TYP_OHM } from '../cellData';
 
-describe('r0Cell / r1Cell / r2Cell — NMC lookup', () => {
-  it('r0 is highest at low SOC and lowest at high SOC', () => {
+describe('r0Cell / r1Cell / r2Cell — EP9343126VVP lookup', () => {
+  it('r0 is highest at low SOC', () => {
     expect(r0Cell(0.20)).toBeGreaterThan(r0Cell(1.00));
   });
 
-  it('r0 at SOC=1.0 is 15 mΩ', () => {
-    expect(r0Cell(1.00)).toBeCloseTo(0.015, 4);
+  it('13S2P pack R0 at 50 % SOC is ≈ 24 mΩ', () => {
+    expect(r0Cell(0.50) * 13 / 2).toBeCloseTo(0.024, 3);
   });
 
-  it('r0 at SOC=0.20 is 35 mΩ', () => {
-    expect(r0Cell(0.20)).toBeCloseTo(0.035, 4);
+  it('DC r0 is above the datasheet 1 kHz AC value but within 2.5×', () => {
+    for (const s of [0.2, 0.5, 1.0]) {
+      expect(r0Cell(s)).toBeGreaterThan(CELL_R_AC_TYP_OHM);
+      expect(r0Cell(s)).toBeLessThan(2.5 * CELL_R_AC_TYP_OHM);
+    }
   });
 
-  it('r1 at SOC=1.0 is 5 mΩ', () => {
-    expect(r1Cell(1.00)).toBeCloseTo(0.005, 4);
-  });
-
-  it('r2 at SOC=0.20 is 8 mΩ', () => {
-    expect(r2Cell(0.20)).toBeCloseTo(0.008, 4);
+  it('RC resistances are smaller than r0 (power cell)', () => {
+    for (const s of [0.2, 0.5, 1.0]) {
+      expect(r1Cell(s)).toBeLessThan(r0Cell(s));
+      expect(r2Cell(s)).toBeLessThan(r0Cell(s));
+    }
   });
 
   it('clamps SOC below 0.20 to 0.20 value', () => {
@@ -164,5 +168,19 @@ describe('battery2RCStep — integration', () => {
     const hot = battery2RCStep(0.8, 0, 0, 0, 13, 1, 13.2, 45, 1000, 0.05);
     const cold = battery2RCStep(0.8, 0, 0, 0, 13, 1, 13.2, 5, 1000, 0.05);
     expect(cold.I_bat).toBeGreaterThan(hot.I_bat);
+  });
+});
+
+describe('packMaxPowerW — cell current limit', () => {
+  it('13S2P at 80 % SOC is limited by 198 A, not by matched impedance', () => {
+    const P = packMaxPowerW(0.8, 0, 0, 13, 2, 25);
+    // ≈ (V_oc − 198·R0)·198 ≈ 10 kW, far below V²/4R ≈ 35 kW
+    expect(P).toBeLessThan(198 * 13 * 4.2);
+    expect(P).toBeGreaterThan(9000);
+  });
+
+  it('custom current limit is respected', () => {
+    const P100 = packMaxPowerW(0.8, 0, 0, 13, 2, 25, 100);
+    expect(P100).toBeLessThan(100 * 13 * 4.2);
   });
 });

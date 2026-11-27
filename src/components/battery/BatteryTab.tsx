@@ -12,6 +12,7 @@ import { ShortCircuitPanel } from './ShortCircuitPanel';
 import { LineChart } from '../charts/LineChart';
 import { exportBatteryCSV } from '../../utils/csvExport';
 import { calcSoH } from '../../simulation/ecm';
+import { KQ_DATASHEET, DEFAULT_R1_MOHM, DEFAULT_R2_MOHM } from '../../simulation/cellData';
 
 export function BatteryTab() {
   const presets = usePresets();
@@ -30,8 +31,8 @@ export function BatteryTab() {
 
   // Sim mode state
   const [mode, setMode] = useState<SimMode>('const');
-  const [current, setCurrent] = useState(250);
-  const [duration, setDuration] = useState(10);
+  const [current, setCurrent] = useState(100);
+  const [duration, setDuration] = useState(60);
   const [profileSteps, setProfileSteps] = useState<ProfileStep[]>([
     { duration_s: 60, current_A: 100 },
     { duration_s: 120, current_A: 50 },
@@ -40,16 +41,16 @@ export function BatteryTab() {
   const [chargeCurrent, setChargeCurrent] = useState(13);
   const [chargeCutoff, setChargeCutoff] = useState(1);
   const [chargeDuration, setChargeDuration] = useState(3600);
-  const [ocLimit, setOcLimit] = useState(250);
+  const [ocLimit, setOcLimit] = useState(198);  // 2P × 99 A datasheet
   const [tLimit, setTLimit] = useState(60);
   const [t0, setT0] = useState(25);
   const [soc0, setSoc0] = useState(100);
 
   // ECM state
   const [cycles, setCycles] = useState(0);
-  const [r1, setR1] = useState(10);
+  const [r1, setR1] = useState(DEFAULT_R1_MOHM);
   const [tau1, setTau1] = useState(5);
-  const [r2, setR2] = useState(15);
+  const [r2, setR2] = useState(DEFAULT_R2_MOHM);
   const [tau2, setTau2] = useState(50);
 
   const pack: PackConfig = useMemo(() => ({
@@ -66,14 +67,14 @@ export function BatteryTab() {
     i_max: 198,
   }), [series, parallel, capacity, vMax, vNom, vMin, resistance, thermalMass, coolingUA]);
 
-  const soh = calcSoH(cycles, 1.5e-4, 4.0e-4);
+  const soh = calcSoH(cycles, KQ_DATASHEET, 4.0e-4);
   const ecm: EcmConfig = useMemo(() => ({
     R1_Ohm: r1 / 1000,
     tau1_s: tau1,
     R2_Ohm: r2 / 1000,
     tau2_s: tau2,
     cycles,
-    kQ: 1.5e-4,
+    kQ: KQ_DATASHEET,
     kR: 4.0e-4,
     soh_cap: soh.soh_cap,
     soh_res: soh.soh_res,

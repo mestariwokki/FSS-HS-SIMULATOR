@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import type { PackConfig, EcmConfig, MotorSimState, MotorDataPoint, MotorMode, MotorProfileStep, MotorSimStats } from '../types';
 import { motorStep, type MotorStepConfig } from '../simulation/motor/motorStep';
 import { tractionLimit } from '../simulation/motor/traction';
+import { bmsCheck, defaultBmsLimits, BMS_TIMERS_ZERO, type BmsTimers } from '../simulation/bms';
 // Motor constants used via MotorStepConfig
 
 function makeMotorState(soc0_pct: number, t0_C: number): MotorSimState {
@@ -15,6 +16,7 @@ function makeMotorState(soc0_pct: number, t0_C: number): MotorSimState {
     V_RC2: 0,
     T_motor_C: t0_C,
     T_esc_C: t0_C,
+    T_bat_C: t0_C,
     v_kmh: 0,
     x_m: 0,
     boost_t: 0,
@@ -107,6 +109,8 @@ export function useMotorSim() {
 
     let profileIdx = 0;
     let elapsed = 0;
+    const bmsLimits = defaultBmsLimits(pack.parallel);
+    let bmsTimers: BmsTimers = BMS_TIMERS_ZERO;
 
     function loop() {
       let st = stateRef.current;
@@ -224,6 +228,18 @@ export function useMotorSim() {
         if (eta > 0) { stats.eta_sum += eta / 100; stats.eta_n++; }
 
         if (dataRef.current.length < 6000) dataRef.current.push(point);
+
+        // HSC protection (T11.7.7): the AIR opens on a BMS trip
+        const bms = bmsCheck(bmsTimers, bmsLimits, result.point.V_t, pack.series,
+          result.point.I_bat, st.T_bat_C, dt);
+        bmsTimers = bms.timers;
+        if (bms.trip) {
+          stateRef.current = st;
+          setData([...dataRef.current]);
+          setSimStats({ ...statsRef.current });
+          finish(`Stopped \u2014 ${bms.trip} at t = ${st.t.toFixed(1)} s.`);
+          return;
+        }
       }
 
       stateRef.current = st;

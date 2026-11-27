@@ -20,9 +20,9 @@ export function SoHPanel(props: SoHPanelProps) {
         Aging (SoH) -- 2RC ECM
       </div>
       <ParamGroup label="Cycles N" value={props.cycles} onChange={props.onCyclesChange} min={0} max={3000} step={10} unit="cycles" />
-      <ParamGroup label="R1" value={props.r1} onChange={props.onR1Change} min={1} max={200} step={1} unit="mOhm" title="Thevenin 2RC: fast polarization resistance per cell" />
+      <ParamGroup label="R1" value={props.r1} onChange={props.onR1Change} min={0.1} max={200} step={0.1} unit="mOhm" title="Thevenin 2RC: fast polarization resistance per cell" />
       <ParamGroup label="tau1" value={props.tau1} onChange={props.onTau1Change} min={1} max={300} step={1} unit="s" />
-      <ParamGroup label="R2" value={props.r2} onChange={props.onR2Change} min={1} max={200} step={1} unit="mOhm" />
+      <ParamGroup label="R2" value={props.r2} onChange={props.onR2Change} min={0.1} max={200} step={0.1} unit="mOhm" />
       <ParamGroup label="tau2" value={props.tau2} onChange={props.onTau2Change} min={1} max={600} step={1} unit="s" />
     </div>
   );
