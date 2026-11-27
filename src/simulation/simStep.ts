@@ -5,7 +5,8 @@ import {
   C_E, E_D, E_K,
   A_POS, A_NEG, A_CELL,
 } from './constants';
-import { U_pos, U_neg, ocvPack } from './ocv';
+import { U_pos, U_neg } from './ocv';
+import { resistanceFactors, ocvCellT, dUdT, capacityFactorT } from './cellModel';
 import { arrhenius, surfaceConc, exchangeCurrentDensity, butlerVolmer, updateBulkConc } from './spm';
 import { stepThermal } from './thermal';
 
@@ -18,7 +19,7 @@ export interface SimStepResult {
  * One battery step.
  *
  * Terminal voltage (equivalent-circuit model, the part that sets V_t):
- *   V_t = OCV_table(SOC) − I·R0_eff − V_RC1 − V_RC2
+ *   V_t = OCV(SOC, T) − I·R0(SOC, T) − V_RC1 − V_RC2   (cellModel.ts scaling)
  * OCV comes from the EP9343126VVP table (cellData.ts), R0 is the measured /
  * estimated pack DC resistance, so electrode kinetics are already lumped into it.
  *
@@ -35,21 +36,25 @@ export function simStep(
   dt: number,
 ): SimStepResult {
   const T = state.T_K;
+  const T_C = T - 273.15;
 
-  // SoH: effective parameters
-  const Q_eff = pack.capacity_Ah * ecm.soh_cap;
-  const R_eff = pack.resistance_Ohm * ecm.soh_res;
+  // User-set R0/R1/R2 are the 25 °C, 50 % SOC values; the EP9343126VVP cell
+  // model scales them with SOC and temperature (Arrhenius), and the usable
+  // capacity with temperature (datasheet −20/25/60 °C anchors).
+  const rf = resistanceFactors(state.soc, T_C);
+  const Q_eff = pack.capacity_Ah * ecm.soh_cap * capacityFactorT(T_C);
+  const R_eff = pack.resistance_Ohm * ecm.soh_res * rf.f0;
 
   // 2RC Thevenin: exponential update (exact, dt-independent)
-  const R1_pack = ecm.R1_Ohm * pack.series / pack.parallel;
-  const R2_pack = ecm.R2_Ohm * pack.series / pack.parallel;
+  const R1_pack = ecm.R1_Ohm * pack.series / pack.parallel * rf.f1 * ecm.soh_res;
+  const R2_pack = ecm.R2_Ohm * pack.series / pack.parallel * rf.f2 * ecm.soh_res;
   const alpha1 = Math.exp(-dt / ecm.tau1_s);
   const alpha2 = Math.exp(-dt / ecm.tau2_s);
   const V_RC = state.V_RC * alpha1 + i_bat * R1_pack * (1.0 - alpha1);
   const V_RC2 = state.V_RC2 * alpha2 + i_bat * R2_pack * (1.0 - alpha2);
 
   // ── Terminal voltage (ECM) ──
-  const voc_pack = ocvPack(state.soc, pack.series);
+  const voc_pack = ocvCellT(state.soc, T_C) * pack.series;
   const vt_pack = voc_pack - i_bat * R_eff - V_RC - V_RC2;
 
   // ── SPM electrode diagnostics ──
@@ -100,7 +105,7 @@ export function simStep(
     + (R1_pack > 0 ? V_RC * V_RC / R1_pack : 0)
     + (R2_pack > 0 ? V_RC2 * V_RC2 / R2_pack : 0);
   const T_K = stepThermal(T, i_bat, Q_j, pack.series, state.T_amb_K,
-    pack.thermalMass_JK, pack.coolingUA_WK, dt);
+    pack.thermalMass_JK, pack.coolingUA_WK, dt, dUdT(state.soc));
 
   const newState: SimState = {
     t,

@@ -71,7 +71,7 @@ export function HybridTab() {
   const [P_em_cont, setP_em_cont] = useState(7.0);
   const [em_gear, setEmGear] = useState(3.0);
   const [kV_em, setKvEm] = useState(104);        // RPM/V per motor (Neumotors 6530/8.5/104)
-  const [I_em_peak, setIEmPeak] = useState(100); // A per motor
+  const [I_em_peak, setIEmPeak] = useState(82);  // A per motor: 7.5 Nm motor max / Kt 0.0918 (HSF; ESC 100 A peak is not the limit)
   const [I_em_cont, setIEmCont] = useState(86);  // A per motor
   const [eta_em, setEtaEm] = useState(0.88);
   const [eta_regen, setEtaRegen] = useState(0.80);
