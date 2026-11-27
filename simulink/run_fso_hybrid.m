@@ -22,7 +22,7 @@ fprintf('  end speed           %.1f km/h\n', v.Data(end) * 3.6);
 fprintf('  peak HSC current    %.1f A  (limit %.0f A cont / %.0f A 3 s)\n', ...
         max(I.Data), P.bms.i_dis_cont, P.bms.i_dis_peak);
 fprintf('  min HSC voltage     %.2f V  (%.3f V/cell)\n', min(Vt.Data), min(Vt.Data) / P.pack.S);
-fprintf('  pack temperature    %.2f C at the end\n', T.Data(end));
+fprintf('  hottest cell        %.2f C at the end (sensor)\n', T.Data(end, 1));
 fprintf('  BMS trip code       %d\n', max(trip.Data));
 
 R = fso_reference_sim(P, 'hybrid');

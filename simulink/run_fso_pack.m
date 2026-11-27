@@ -25,11 +25,13 @@ fprintf('  stopped at          %.1f s, trip: %s\n', Vt.Time(end), codes{max(trip
 if soc.Data(end) <= 0, fprintf('  pack empty (SOC = 0) before any BMS trip\n'); end
 fprintf('  delivered           %.2f Ah, %.1f Wh, SOC %.1f %%\n', ...
         I_profile(1,2) * Vt.Time(end) / 3600, E.Data(end), soc.Data(end) * 100);
-fprintf('  pack temperature    %.1f C\n', T.Data(end));
+fprintf('  hottest cell (sensor/core) %.1f / %.1f C, structure %.1f C\n', ...
+        T.Data(end, 1), T.Data(end, 1) + T.Data(end, 4), T.Data(end, 3));
 
 R = fso_reference_sim(P, 'pack', I_profile);
 fprintf('  reference loop      stopped at %.1f s, T %.1f C\n', R.t(end), R.T_bat(end));
 
 figure('Name', 'HSC 13S2P bench');
 subplot(2,1,1); plot(Vt.Time, Vt.Data); ylabel('V_{HSC} [V]'); grid on;
-subplot(2,1,2); plot(T.Time, T.Data); ylabel('T_{cell} [C]'); xlabel('t [s]'); grid on;
+subplot(2,1,2); plot(T.Time, T.Data(:, 1:3)); ylabel('T [C]'); xlabel('t [s]'); grid on;
+legend('hot cells (sensor)', 'other cells', 'structure', 'Location', 'best');

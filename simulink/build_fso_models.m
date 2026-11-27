@@ -180,7 +180,8 @@ end
 
 % ═════════════════════════════════════════════════════════════════════════
 function path = add_pack_subsystem(sys, pos)
-%ADD_PACK_SUBSYSTEM  HSC 13S2P: OCV + 2RC ECM + lumped thermal.
+%ADD_PACK_SUBSYSTEM  HSC 13S2P: OCV + 2RC ECM (T, SOC) + 3-node concept thermal.
+%   T_C is a 4-vector [T_hot surface; T_cells; T_struct; dT_core].
 %   In:  1 I_pack [A] (> 0 discharge), 2 T_amb [C]
 %   Out: 1 V_t, 2 SOC, 3 T_C, 4 V_eff, 5 R0p, 6 P_loss, 7 E_Wh
 path = [sys '/HSC_Pack_13S2P'];
@@ -200,7 +201,7 @@ sc = mfun(p, 'Pack_Scaling', [420 20 580 300], 'mf_pack_scaling.m', {'P'}, '');
 ecm = mfun(p, 'ECM_Thermal', [660 80 840 420], 'mf_ecm_thermal.m', {'P'}, '');
 blk(p, 'built-in/Integrator', 'V_rc1', [900 100 930 130]);
 blk(p, 'built-in/Integrator', 'V_rc2', [900 160 930 190]);
-blk(p, 'built-in/Integrator', 'T_C', [900 220 930 250], 'InitialCondition', 'P.run.T0_C');
+blk(p, 'built-in/Integrator', 'T_C', [900 220 930 250], 'InitialCondition', '[P.run.T0_C; P.run.T0_C; P.run.T0_C; 0]');
 blk(p, 'built-in/Integrator', 'E_Wh', [900 340 930 370]);
 
 ln(p, 'I_pack/1', 'Coulomb count/1');
